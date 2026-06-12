@@ -1,19 +1,43 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
-import type { CampaignDailySummary, CampaignEngagementDaily, AudienceTopSegment, SyncLog } from "@/types/database";
+import type { CampaignDailySummary, CampaignEngagementDaily, AudienceTopSegment, SyncLog, MetaCampaign } from "@/types/database";
 
 const REVALIDATE = 5 * 60 * 1000;
 
-export function useCampaignSummary(dateStart: string, dateStop: string) {
-  return useSWR<CampaignDailySummary[]>(
-    ["campaign_summary", dateStart, dateStop],
+// ── Daftar campaign untuk dropdown filter ──────────────────────────────────────
+export function useCampaignList() {
+  const { data, error, isLoading } = useSWR<MetaCampaign[]>(
+    "campaign_list",
     async () => {
       const { data, error } = await supabase
+        .from("meta_campaigns")
+        .select("id,name,status")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    { refreshInterval: REVALIDATE },
+  );
+  return { campaigns: data, error, isLoading };
+}
+
+// ── Campaign summary dengan filter ────────────────────────────────────────────
+export function useCampaignSummary(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  return useSWR<CampaignDailySummary[]>(
+    ["campaign_summary", dateStart, dateStop, campaignIds.join(",")],
+    async () => {
+      let query = supabase
         .from("v_campaign_daily_summary")
         .select("*")
         .gte("date_start", dateStart)
         .lte("date_start", dateStop)
         .order("date_start", { ascending: true });
+
+      if (campaignIds.length > 0) {
+        query = query.in("campaign_id", campaignIds);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },
@@ -21,8 +45,9 @@ export function useCampaignSummary(dateStart: string, dateStop: string) {
   );
 }
 
-export function useKpiTotals(dateStart: string, dateStop: string) {
-  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop);
+// ── KPI totals ────────────────────────────────────────────────────────────────
+export function useKpiTotals(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop, campaignIds);
   const totals = data
     ? data.reduce(
         (acc, row) => ({
@@ -46,8 +71,9 @@ export function useKpiTotals(dateStart: string, dateStop: string) {
   return { totals: derived, error, isLoading };
 }
 
-export function useSpendChart(dateStart: string, dateStop: string) {
-  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop);
+// ── Spend chart ────────────────────────────────────────────────────────────────
+export function useSpendChart(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop, campaignIds);
   const chartData = data
     ? Object.values(
         data.reduce<Record<string, { date: string; spend: number; roas: number; impressions: number }>>(
@@ -66,16 +92,23 @@ export function useSpendChart(dateStart: string, dateStop: string) {
   return { chartData, error, isLoading };
 }
 
-export function useEngagementSummary(dateStart: string, dateStop: string) {
+// ── Engagement summary dengan filter ──────────────────────────────────────────
+export function useEngagementSummary(dateStart: string, dateStop: string, campaignIds: string[] = []) {
   return useSWR<CampaignEngagementDaily[]>(
-    ["engagement_summary", dateStart, dateStop],
+    ["engagement_summary", dateStart, dateStop, campaignIds.join(",")],
     async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("v_campaign_engagement_daily")
         .select("*")
         .gte("date_start", dateStart)
         .lte("date_start", dateStop)
         .order("date_start", { ascending: true });
+
+      if (campaignIds.length > 0) {
+        query = query.in("campaign_id", campaignIds);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },
@@ -83,16 +116,23 @@ export function useEngagementSummary(dateStart: string, dateStop: string) {
   );
 }
 
-export function useAudienceSegments(breakdownType: string) {
+// ── Audience segments dengan filter ───────────────────────────────────────────
+export function useAudienceSegments(breakdownType: string, campaignIds: string[] = []) {
   return useSWR<AudienceTopSegment[]>(
-    ["audience_segments", breakdownType],
+    ["audience_segments", breakdownType, campaignIds.join(",")],
     async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("v_audience_top_segments")
         .select("*")
         .eq("breakdown_type", breakdownType)
         .order("impressions", { ascending: false })
         .limit(20);
+
+      if (campaignIds.length > 0) {
+        query = query.in("campaign_id", campaignIds);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },
@@ -100,6 +140,7 @@ export function useAudienceSegments(breakdownType: string) {
   );
 }
 
+// ── Sync log ──────────────────────────────────────────────────────────────────
 export function useSyncLog() {
   return useSWR<SyncLog[]>(
     "sync_log",
