@@ -1,95 +1,63 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+import { useState } from "react";
+import { KpiCard }         from "@/components/KpiCard";
+import { SpendRoasChart }  from "@/components/SpendRoasChart";
+import { EngagementChart } from "@/components/EngagementChart";
+import { AudienceTable }   from "@/components/AudienceTable";
+import { SyncStatus }      from "@/components/SyncStatus";
+import { useKpiTotals }    from "@/hooks/useMetaData";
 
-export default function Home() {
+const PRESETS = [{ label: "7 hari", days: 7 }, { label: "14 hari", days: 14 }, { label: "30 hari", days: 30 }];
+
+const isoDate = (offset = 0) => { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().split("T")[0]; };
+const idr = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+const num = (n: number) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}jt` : n >= 1_000 ? `${(n/1_000).toFixed(1)}rb` : String(n);
+
+export default function DashboardPage() {
+  const [preset, setPreset] = useState(7);
+  const dateStop  = isoDate(0);
+  const dateStart = isoDate(-preset + 1);
+  const { totals, isLoading } = useKpiTotals(dateStart, dateStop);
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className="dashboard">
+      <header className="dash-header">
+        <div className="dash-brand">
+          <span className="brand-meta">Meta Ads</span>
+          <span className="brand-sep">/</span>
+          <span className="brand-title">Performance Dashboard</span>
         </div>
-      </div>
+        <div className="dash-controls">
+          <SyncStatus />
+          <div className="preset-group">
+            {PRESETS.map((p) => (
+              <button key={p.days} className={`preset-btn ${preset === p.days ? "active" : ""}`} onClick={() => setPreset(p.days)}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+      <section className="kpi-grid">
+        <KpiCard label="Total Spend" value={totals ? idr(totals.spend) : "—"} loading={isLoading} />
+        <KpiCard label="ROAS"        value={totals ? `${totals.roas.toFixed(2)}x` : "—"} sub="return on ad spend" loading={isLoading} />
+        <KpiCard label="Impresi"     value={totals ? num(totals.impressions) : "—"} loading={isLoading} />
+        <KpiCard label="Reach"       value={totals ? num(totals.reach) : "—"} loading={isLoading} />
+        <KpiCard label="Klik"        value={totals ? num(totals.clicks) : "—"} sub={totals ? `CTR ${totals.ctr.toFixed(2)}%` : undefined} loading={isLoading} />
+        <KpiCard label="CPC"         value={totals ? idr(totals.cpc) : "—"} sub="cost per click" loading={isLoading} />
+        <KpiCard label="Pembelian"   value={totals ? num(totals.purchases) : "—"} sub={totals ? `Nilai ${idr(totals.purchase_value)}` : undefined} loading={isLoading} />
+        <KpiCard label="Leads"       value={totals ? num(totals.leads) : "—"} loading={isLoading} />
+      </section>
 
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
+      <section className="charts-row">
+        <SpendRoasChart  dateStart={dateStart} dateStop={dateStop} />
+        <EngagementChart dateStart={dateStart} dateStop={dateStop} />
+      </section>
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+      <section className="audience-section">
+        <AudienceTable />
+      </section>
+    </div>
   );
 }
