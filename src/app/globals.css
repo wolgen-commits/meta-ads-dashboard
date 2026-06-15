@@ -102,6 +102,55 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
 
+/* ── Database Tab ── */
+.db-tab { display: flex; flex-direction: column; gap: 20px; }
+
+.db-table-selector { display: flex; gap: 8px; flex-wrap: wrap; }
+.db-table-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 13px; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.db-table-btn:hover { color: var(--text); border-color: rgba(0,0,0,0.18); }
+.db-table-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+.db-filter-bar { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; padding: 16px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.db-chip-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.db-chip { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; transition: all .15s; }
+.db-chip:hover { color: var(--text); border-color: rgba(0,0,0,0.18); }
+.db-chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.db-search-input { min-width: 200px; }
+
+.db-export-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.db-export-btn:hover:not(:disabled) { background: var(--blue); color: #fff; border-color: var(--blue); }
+.db-export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.db-card { padding: 0 !important; overflow: hidden; }
+.db-table-info { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.db-table-name { font-size: 14px; font-weight: 600; }
+.db-table-count { font-size: 12px; color: var(--text-muted); }
+.db-pagesize-wrap { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+.th-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.th-sortable:hover { color: var(--blue); }
+.sort-icon { font-size: 10px; color: var(--text-muted); opacity: 0.6; margin-left: 2px; }
+
+.db-status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.db-status-active  { background: rgba(22,163,74,0.12);  color: var(--green);  }
+.db-status-paused  { background: rgba(234,88,12,0.12);  color: var(--orange); }
+.db-status-success { background: rgba(22,163,74,0.12);  color: var(--green);  }
+.db-status-failed  { background: rgba(239,68,68,0.12);  color: #ef4444;       }
+.db-status-running { background: rgba(37,99,235,0.12);  color: var(--blue);   }
+.db-status-archived, .db-status-deleted { background: rgba(0,0,0,0.06); color: var(--text-muted); }
+
+.db-loading { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+.db-row-skeleton { height: 36px; border-radius: 4px; background: linear-gradient(90deg, var(--border) 25%, transparent 50%, var(--border) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+.db-error { padding: 32px; text-align: center; color: #ef4444; font-size: 13px; }
+.db-empty { text-align: center !important; padding: 40px !important; color: var(--text-muted) !important; font-size: 13px; }
+
+.db-pagination { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 12px; border-top: 1px solid var(--border); }
+.db-page-btn { padding: 4px 10px; min-width: 32px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 13px; cursor: pointer; transition: all .15s; }
+.db-page-btn:hover:not(:disabled) { color: var(--text); border-color: rgba(0,0,0,0.18); }
+.db-page-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.db-page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.db-page-ellipsis { padding: 4px 6px; font-size: 13px; color: var(--text-muted); }
+
 /* ── Instagram tab ── */
 .ig-tab { display: flex; flex-direction: column; gap: 24px; }
 .ig-account-switcher { display: flex; gap: 8px; flex-wrap: wrap; }
