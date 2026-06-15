@@ -6,6 +6,7 @@ import { EngagementChart } from "@/components/EngagementChart";
 import { AudienceTable }   from "@/components/AudienceTable";
 import { SyncStatus }      from "@/components/SyncStatus";
 import { InstagramTab }    from "@/components/InstagramTab";
+import { DatabaseTab }     from "@/components/DatabaseTab";
 import { useKpiTotals, useCampaignList, useObjectiveList } from "@/hooks/useMetaData";
 
 const isoDate = (offset = 0) => {
@@ -106,7 +107,7 @@ export default function DashboardPage() {
   const [dateStop,  setDateStop]  = useState(isoDate(0));
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
   const [selectedCampaigns,  setSelectedCampaigns]  = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<"ads" | "instagram">("ads");
+  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database">("ads");
 
   const { data: objectives }  = useObjectiveList();
   // Ambil SEMUA campaign (tanpa filter objective) untuk referensi ID
@@ -162,6 +163,9 @@ export default function DashboardPage() {
         </button>
         <button className={`tab-btn ${activeTab === "instagram" ? "active" : ""}`} onClick={() => setActiveTab("instagram")}>
           📸 Instagram
+        </button>
+        <button className={`tab-btn ${activeTab === "database" ? "active" : ""}`} onClick={() => setActiveTab("database")}>
+          🗄️ Database
         </button>
       </div>
 
@@ -222,6 +226,7 @@ export default function DashboardPage() {
       )}
 
       {activeTab === "instagram" && <InstagramTab />}
+      {activeTab === "database"  && <DatabaseTab />}
       </div>
   );
 }
