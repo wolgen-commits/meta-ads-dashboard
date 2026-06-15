@@ -12,9 +12,9 @@ const BREAKDOWNS = [
 const idr = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
 const num = (n: number) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}jt` : n >= 1_000 ? `${(n/1_000).toFixed(1)}rb` : String(n);
 
-export function AudienceTable() {
+export function AudienceTable({ campaignIds = [] }: { campaignIds?: string[] }) {
   const [breakdown, setBreakdown] = useState("age,gender");
-  const { data, isLoading } = useAudienceSegments(breakdown);
+  const { data, isLoading } = useAudienceSegments(breakdown, campaignIds);
 
   const label = (row: AudienceTopSegment) => {
     if (breakdown === "age,gender")        return `${row.age ?? "-"} · ${row.gender ?? "-"}`;

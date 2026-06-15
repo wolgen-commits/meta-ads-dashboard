@@ -1,24 +1,47 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
-import type { CampaignDailySummary, CampaignEngagementDaily, AudienceTopSegment, SyncLog, MetaCampaign } from "@/types/database";
+import type { CampaignDailySummary, CampaignEngagementDaily, AudienceTopSegment, SyncLog, MetaCampaign, IgAccount, IgMedia, IgMediaInsight } from "@/types/database";
 
 const REVALIDATE = 5 * 60 * 1000;
 
-// ── Daftar campaign untuk dropdown filter ──────────────────────────────────────
-export function useCampaignList() {
-  const { data, error, isLoading } = useSWR<MetaCampaign[]>(
-    "campaign_list",
+// ── Daftar campaign untuk dropdown filter ─────────────────────────────────────
+export function useCampaignList(objectives: string[] = []) {
+  return useSWR<MetaCampaign[]>(
+    ["campaign_list", objectives.join(",")],
     async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("meta_campaigns")
-        .select("id,name,status")
+        .select("id,name,status,objective")
         .order("name", { ascending: true });
+
+      if (objectives.length > 0) {
+        query = query.in("objective", objectives);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },
     { refreshInterval: REVALIDATE },
   );
-  return { campaigns: data, error, isLoading };
+}
+
+// ── Daftar objective unik ─────────────────────────────────────────────────────
+export function useObjectiveList() {
+  return useSWR<string[]>(
+    "objective_list",
+    async () => {
+      const { data, error } = await supabase
+        .from("meta_campaigns")
+        .select("objective")
+        .not("objective", "is", null);
+      if (error) throw error;
+      const rows = (data ?? []) as { objective: string | null }[];
+      const unique = Array.from(new Set(rows.map((r) => r.objective).filter((o): o is string => o !== null)));
+      return unique.sort();
+    },
+    { refreshInterval: REVALIDATE },
+  );
 }
 
 // ── Campaign summary dengan filter ────────────────────────────────────────────
@@ -92,7 +115,7 @@ export function useSpendChart(dateStart: string, dateStop: string, campaignIds: 
   return { chartData, error, isLoading };
 }
 
-// ── Engagement summary dengan filter ──────────────────────────────────────────
+// ── Engagement summary ─────────────────────────────────────────────────────────
 export function useEngagementSummary(dateStart: string, dateStop: string, campaignIds: string[] = []) {
   return useSWR<CampaignEngagementDaily[]>(
     ["engagement_summary", dateStart, dateStop, campaignIds.join(",")],
@@ -116,7 +139,7 @@ export function useEngagementSummary(dateStart: string, dateStop: string, campai
   );
 }
 
-// ── Audience segments dengan filter ───────────────────────────────────────────
+// ── Audience segments ──────────────────────────────────────────────────────────
 export function useAudienceSegments(breakdownType: string, campaignIds: string[] = []) {
   return useSWR<AudienceTopSegment[]>(
     ["audience_segments", breakdownType, campaignIds.join(",")],
@@ -154,5 +177,76 @@ export function useSyncLog() {
       return data ?? [];
     },
     { refreshInterval: 60_000 },
+  );
+}
+
+// ── Instagram hooks ───────────────────────────────────────────────────────────
+
+export function useIgAccounts() {
+  return useSWR<IgAccount[]>(
+    "ig_accounts",
+    async () => {
+      const { data, error } = await supabase.from("ig_accounts").select("*");
+      if (error) throw error;
+      return data ?? [];
+    },
+    { refreshInterval: REVALIDATE },
+  );
+}
+
+export function useIgTopMedia(accountId: string, limit = 12) {
+  return useSWR<(IgMedia & IgMediaInsight)[]>(
+    ["ig_top_media", accountId, limit],
+    async () => {
+      const { data, error } = await supabase
+        .from("ig_media_insights")
+        .select("*, ig_media!inner(id, ig_account_id, media_type, media_product_type, caption, permalink, timestamp, thumbnail_url)")
+        .eq("ig_account_id", accountId)
+        .not("ig_media.media_product_type", "eq", "STORY")
+        .order("ig_media(timestamp)", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []).map((m: any) => ({
+        ...m.ig_media,
+        likes:      m.likes,
+        comments:   m.comments,
+        shares:     m.shares,
+        saved:      m.saved,
+        reach:      m.reach,
+        impressions: m.impressions,
+        video_views: m.video_views,
+        plays:      m.plays,
+      }));
+    },
+    { refreshInterval: REVALIDATE },
+  );
+}
+
+export function useIgSummary(accountId: string) {
+  return useSWR<{
+    total_likes: number; total_comments: number;
+    total_shares: number; total_saved: number;
+    total_reach: number; avg_engagement_rate: number;
+  }>(
+    ["ig_summary", accountId],
+    async () => {
+      const { data, error } = await supabase
+        .from("ig_media_insights")
+        .select("likes,comments,shares,saved,reach")
+        .eq("ig_account_id", accountId);
+      if (error) throw error;
+      const rows = (data ?? []) as Pick<IgMediaInsight, "likes" | "comments" | "shares" | "saved" | "reach">[];
+      const total_likes    = rows.reduce((s, r) => s + (r.likes ?? 0), 0);
+      const total_comments = rows.reduce((s, r) => s + (r.comments ?? 0), 0);
+      const total_shares   = rows.reduce((s, r) => s + (r.shares ?? 0), 0);
+      const total_saved    = rows.reduce((s, r) => s + (r.saved ?? 0), 0);
+      const total_reach    = rows.reduce((s, r) => s + (r.reach ?? 0), 0);
+      const total_eng      = total_likes + total_comments + total_shares + total_saved;
+      return {
+        total_likes, total_comments, total_shares, total_saved, total_reach,
+        avg_engagement_rate: total_reach > 0 ? (total_eng / total_reach) * 100 : 0,
+      };
+    },
+    { refreshInterval: REVALIDATE },
   );
 }
