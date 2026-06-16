@@ -8,19 +8,36 @@ interface KpiCardProps {
   trend?: number;
   loading?: boolean;
   description?: string;
+  accent?: "magenta" | "success" | "warning" | "info";
 }
 
-export function KpiCard({ label, value, sub, trend, loading, description }: KpiCardProps) {
+export function KpiCard({ label, value, sub, trend, loading, description, accent }: KpiCardProps) {
   const [showInfo, setShowInfo] = useState(false);
+
+  const accentStyle: Record<string, string> = {
+    magenta: "3px solid #BB2649",
+    success: "3px solid #16A34A",
+    warning: "3px solid #D97706",
+    info:    "3px solid #2563EB",
+  };
 
   return (
     <>
-      <div className={`kpi-card ${description ? "clickable" : ""}`} onClick={() => description && setShowInfo(true)}>
+      <div
+        className={`kpi-card ${description ? "clickable" : ""}`}
+        onClick={() => description && setShowInfo(true)}
+        style={accent ? { "--kpi-accent": accentStyle[accent] } as React.CSSProperties : undefined}
+      >
+        {accent && (
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: accentStyle[accent].split(" ")[2] }} />
+        )}
         <div className="kpi-top">
           <span className="kpi-label">{label}</span>
           {description && <span className="kpi-info-icon">?</span>}
         </div>
-        {loading ? <div className="kpi-skeleton" /> : (
+        {loading ? (
+          <div className="kpi-skeleton" />
+        ) : (
           <>
             <div className="kpi-value">{value}</div>
             <div className="kpi-bottom">

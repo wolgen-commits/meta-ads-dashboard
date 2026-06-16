@@ -39,13 +39,13 @@ const OBJECTIVE_LABELS: Record<string, string> = {
 
 const KPI_DESCRIPTIONS: Record<string, string> = {
   "Total Spend":   "Total anggaran iklan yang sudah digunakan dalam periode yang dipilih. Ini adalah jumlah uang yang benar-benar terpakai dari semua campaign yang aktif.",
-  "Cost per Lead": "Rata-rata biaya yang dikeluarkan untuk mendapatkan satu lead (prospek). Dihitung dari Total Spend dibagi jumlah Leads. Semakin kecil nilainya, semakin efisien iklan kamu.",
-  "Impresi":       "Jumlah total berapa kali iklan kamu ditampilkan ke pengguna. Satu orang bisa melihat iklan yang sama lebih dari sekali, sehingga impresi bisa lebih besar dari reach.",
-  "Reach":         "Jumlah orang unik yang melihat iklan kamu minimal satu kali dalam periode yang dipilih.",
-  "Klik":          "Jumlah total klik pada iklan kamu. CTR (Click-Through Rate) adalah persentase orang yang melihat iklan lalu mengkliknya.",
-  "CPC":           "Cost Per Click — rata-rata biaya yang dikeluarkan setiap kali ada orang yang mengklik iklan kamu.",
-  "Pembelian":     "Jumlah transaksi pembelian yang terjadi dan dapat dilacak melalui Meta Pixel di website kamu.",
-  "Leads":         "Jumlah prospek yang berhasil didapatkan dari iklan kamu.",
+  "Cost per Lead": "Rata-rata biaya yang dikeluarkan untuk mendapatkan satu lead. Dihitung dari Total Spend dibagi jumlah Leads. Semakin kecil nilainya, semakin efisien.",
+  "Impresi":       "Jumlah total berapa kali iklan ditampilkan ke pengguna. Satu orang bisa melihat iklan yang sama lebih dari sekali.",
+  "Reach":         "Jumlah orang unik yang melihat iklan minimal satu kali dalam periode yang dipilih.",
+  "Klik":          "Jumlah total klik pada iklan. CTR adalah persentase orang yang melihat iklan lalu mengkliknya.",
+  "CPC":           "Cost Per Click — rata-rata biaya setiap kali ada orang yang mengklik iklan.",
+  "Pembelian":     "Jumlah transaksi pembelian yang terlacak melalui Meta Pixel di website.",
+  "Leads":         "Jumlah prospek yang berhasil didapatkan dari iklan, berupa pengisian formulir atau tindakan konversi lain.",
 };
 
 function MultiSelectFilter({
@@ -134,29 +134,32 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard">
+      {/* ── Header ── */}
       <header className="dash-header">
         <div className="dash-brand">
-          <span className="brand-meta">Meta Ads</span>
+          <span className="brand-meta">Magenta ERP</span>
           <span className="brand-sep">/</span>
-          <span className="brand-title">Performance Dashboard</span>
+          <span className="brand-title">Marketing Dashboard</span>
         </div>
         <div className="dash-controls">
           <SyncStatus />
         </div>
       </header>
 
+      {/* ── Tab bar ── */}
       <div className="tab-bar">
         <button className={`tab-btn ${activeTab === "ads" ? "active" : ""}`} onClick={() => setActiveTab("ads")}>
-          📊 Meta Ads
+          Meta Ads
         </button>
         <button className={`tab-btn ${activeTab === "instagram" ? "active" : ""}`} onClick={() => setActiveTab("instagram")}>
-          📸 Instagram
+          Instagram
         </button>
         <button className={`tab-btn ${activeTab === "database" ? "active" : ""}`} onClick={() => setActiveTab("database")}>
-          🗄️ Database
+          Database
         </button>
       </div>
 
+      {/* ── Meta Ads Tab ── */}
       {activeTab === "ads" && (
         <>
           <div className="filter-bar">
@@ -190,14 +193,14 @@ export default function DashboardPage() {
           </div>
 
           <section className="kpi-grid">
-            <KpiCard label="Total Spend"   value={totals ? idr(totals.spend) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Total Spend"]} />
+            <KpiCard label="Total Spend"   value={totals ? idr(totals.spend) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Total Spend"]} accent="magenta" />
             <KpiCard label="Cost per Lead" value={totals ? (costPerLead > 0 ? idr(costPerLead) : "—") : "—"} sub={totals && totals.leads > 0 ? `dari ${totals.leads} leads` : "belum ada leads"} loading={isLoading} description={KPI_DESCRIPTIONS["Cost per Lead"]} />
             <KpiCard label="Impresi"       value={totals ? num(totals.impressions) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Impresi"]} />
-            <KpiCard label="Reach"         value={totals ? num(totals.reach) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Reach"]} />
+            <KpiCard label="Reach"         value={totals ? num(totals.reach) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Reach"]} accent="info" />
             <KpiCard label="Klik"          value={totals ? num(totals.clicks) : "—"} sub={totals ? `CTR ${totals.ctr.toFixed(2)}%` : undefined} loading={isLoading} description={KPI_DESCRIPTIONS["Klik"]} />
             <KpiCard label="CPC"           value={totals ? idr(totals.cpc) : "—"} sub="cost per click" loading={isLoading} description={KPI_DESCRIPTIONS["CPC"]} />
             <KpiCard label="Pembelian"     value={totals ? num(totals.purchases) : "—"} sub={totals ? `Nilai ${idr(totals.purchase_value)}` : undefined} loading={isLoading} description={KPI_DESCRIPTIONS["Pembelian"]} />
-            <KpiCard label="Leads"         value={totals ? num(totals.leads) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Leads"]} />
+            <KpiCard label="Leads"         value={totals ? num(totals.leads) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Leads"]} accent="success" />
           </section>
 
           <section className="charts-row">

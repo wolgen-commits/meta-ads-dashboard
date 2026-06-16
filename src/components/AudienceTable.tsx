@@ -9,6 +9,7 @@ const BREAKDOWNS = [
   { key: "impression_device",  label: "Perangkat" },
   { key: "publisher_platform", label: "Platform" },
 ];
+
 const idr = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
 const num = (n: number) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}jt` : n >= 1_000 ? `${(n/1_000).toFixed(1)}rb` : String(n);
 
@@ -26,7 +27,7 @@ export function AudienceTable({ campaignIds = [] }: { campaignIds?: string[] }) 
   return (
     <div className="chart-card">
       <div className="table-header">
-        <h3 className="chart-title">Audience insights</h3>
+        <h3 className="chart-title">Audience Insights</h3>
         <div className="breakdown-tabs">
           {BREAKDOWNS.map((b) => (
             <button key={b.key} className={`breakdown-tab ${breakdown === b.key ? "active" : ""}`} onClick={() => setBreakdown(b.key)}>
@@ -40,8 +41,11 @@ export function AudienceTable({ campaignIds = [] }: { campaignIds?: string[] }) 
           <table className="data-table">
             <thead>
               <tr>
-                <th>Segmen</th><th className="num">Impresi</th>
-                <th className="num">Klik</th><th className="num">Spend</th><th className="num">CTR</th>
+                <th>Segmen</th>
+                <th className="num">Impresi</th>
+                <th className="num">Klik</th>
+                <th className="num">Spend</th>
+                <th className="num">CTR</th>
               </tr>
             </thead>
             <tbody>
@@ -55,7 +59,7 @@ export function AudienceTable({ campaignIds = [] }: { campaignIds?: string[] }) 
                 </tr>
               ))}
               {(data ?? []).length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: "center", opacity: 0.5 }}>Belum ada data</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "#A1A1AA" }}>Belum ada data</td></tr>
               )}
             </tbody>
           </table>
