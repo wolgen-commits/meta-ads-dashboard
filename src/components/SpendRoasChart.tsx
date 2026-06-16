@@ -19,7 +19,7 @@ export function SpendRoasChart({ dateStart, dateStop, campaignIds = [] }: Props)
           <XAxis dataKey="date" tickFormatter={fmt} tick={{ fontSize: 12, fill: "var(--text-muted)" }} />
           <YAxis yAxisId="spend" tickFormatter={(v) => `${(v/1_000_000).toFixed(1)}jt`} tick={{ fontSize: 12, fill: "var(--text-muted)" }} />
           <YAxis yAxisId="roas" orientation="right" tickFormatter={(v) => `${v.toFixed(1)}x`} tick={{ fontSize: 12, fill: "var(--text-muted)" }} />
-          <Tooltip formatter={(value, name) => name === "spend" ? [idr(Number(value)), "Spend"] : [`${Number(value).toFixed(2)}x`, "ROAS"]} labelFormatter={(d) => fmt(String(d))} contentStyle={{ fontSize: 13 }} />
+          <Tooltip formatter={(value, name) => name === "spend" ? [idr(Number(value)), "Spend"] : [`${Number(value).toFixed(2)}x`, "ROAS"]} labelFormatter={fmt} contentStyle={{ fontSize: 13 }} />
           <Legend />
           <Bar  yAxisId="spend" dataKey="spend" name="spend" fill="var(--blue)"   radius={[4,4,0,0]} opacity={0.85} />
           <Line yAxisId="roas"  dataKey="roas"  name="roas"  stroke="var(--orange)" strokeWidth={2} dot={false} />

@@ -28,20 +28,6 @@ export interface SyncLog {
   error_message: string | null; started_at: string; finished_at: string | null;
   duration_ms: number | null; meta_api_calls: number;
 }
-export interface IgAccount {
-  id: string; name: string; username: string;
-  followers_count: number; media_count: number; synced_at: string;
-}
-export interface IgMedia {
-  id: string; ig_account_id: string; media_type: string;
-  media_product_type: string; caption: string | null;
-  permalink: string | null; timestamp: string; thumbnail_url: string | null;
-}
-export interface IgMediaInsight {
-  media_id: string; ig_account_id: string;
-  likes: number; comments: number; shares: number; saved: number;
-  reach: number; impressions: number; video_views: number;
-}
 export interface CampaignDailySummary {
   campaign_id: string; campaign_name: string; objective: string | null;
   campaign_status: string | null; date_start: string; account_id: string;
@@ -69,9 +55,6 @@ export type Database = {
       engagement_metrics: { Row: EngagementMetric; Insert: EngagementMetric; Update: Partial<EngagementMetric> };
       audience_insights:  { Row: AudienceInsight;  Insert: AudienceInsight;  Update: Partial<AudienceInsight> };
       meta_sync_log:      { Row: SyncLog;           Insert: SyncLog;          Update: Partial<SyncLog> };
-      ig_accounts:        { Row: IgAccount;        Insert: IgAccount;        Update: Partial<IgAccount> };
-      ig_media:           { Row: IgMedia;          Insert: IgMedia;          Update: Partial<IgMedia> };
-      ig_media_insights:  { Row: IgMediaInsight;   Insert: IgMediaInsight;   Update: Partial<IgMediaInsight> };
     };
     Views: {
       v_campaign_daily_summary:    { Row: CampaignDailySummary };

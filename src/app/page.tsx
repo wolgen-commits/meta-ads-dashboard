@@ -41,21 +41,18 @@ const KPI_DESCRIPTIONS: Record<string, string> = {
   "Total Spend":   "Total anggaran iklan yang sudah digunakan dalam periode yang dipilih. Ini adalah jumlah uang yang benar-benar terpakai dari semua campaign yang aktif.",
   "Cost per Lead": "Rata-rata biaya yang dikeluarkan untuk mendapatkan satu lead (prospek). Dihitung dari Total Spend dibagi jumlah Leads. Semakin kecil nilainya, semakin efisien iklan kamu.",
   "Impresi":       "Jumlah total berapa kali iklan kamu ditampilkan ke pengguna. Satu orang bisa melihat iklan yang sama lebih dari sekali, sehingga impresi bisa lebih besar dari reach.",
-  "Reach":         "Jumlah orang unik yang melihat iklan kamu minimal satu kali dalam periode yang dipilih. Berbeda dengan impresi, satu orang hanya dihitung sekali meskipun melihat iklan berkali-kali.",
+  "Reach":         "Jumlah orang unik yang melihat iklan kamu minimal satu kali dalam periode yang dipilih.",
   "Klik":          "Jumlah total klik pada iklan kamu. CTR (Click-Through Rate) adalah persentase orang yang melihat iklan lalu mengkliknya.",
-  "CPC":           "Cost Per Click — rata-rata biaya yang dikeluarkan setiap kali ada orang yang mengklik iklan kamu. Semakin kecil nilainya, semakin efisien.",
+  "CPC":           "Cost Per Click — rata-rata biaya yang dikeluarkan setiap kali ada orang yang mengklik iklan kamu.",
   "Pembelian":     "Jumlah transaksi pembelian yang terjadi dan dapat dilacak melalui Meta Pixel di website kamu.",
-  "Leads":         "Jumlah prospek yang berhasil didapatkan dari iklan kamu, berupa pengisian formulir atau tindakan konversi lain.",
+  "Leads":         "Jumlah prospek yang berhasil didapatkan dari iklan kamu.",
 };
 
 function MultiSelectFilter({
   label, options, selected, onChange, formatLabel,
 }: {
-  label: string;
-  options: string[];
-  selected: string[];
-  onChange: (vals: string[]) => void;
-  formatLabel?: (val: string) => string;
+  label: string; options: string[]; selected: string[];
+  onChange: (vals: string[]) => void; formatLabel?: (val: string) => string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -70,9 +67,7 @@ function MultiSelectFilter({
 
   const toggle = (val: string) =>
     onChange(selected.includes(val) ? selected.filter((x) => x !== val) : [...selected, val]);
-
-  const noneSelected = selected.length === 0;
-  const allSelected  = noneSelected || selected.length === options.length;
+  const allSelected = selected.length === 0 || selected.length === options.length;
   const btnLabel = allSelected ? `Semua ${label}` : `${selected.length} ${label} dipilih`;
 
   return (
@@ -84,8 +79,8 @@ function MultiSelectFilter({
       {open && (
         <div className="cf-dropdown">
           <div className="cf-search-wrap">
-            <button className="cf-all" onClick={() => onChange(noneSelected ? options : [])}>
-              {noneSelected ? "Pilih semua" : "Batalkan semua"}
+            <button className="cf-all" onClick={() => onChange(allSelected ? options : [])}>
+              {allSelected ? "Pilih semua" : "Batalkan semua"}
             </button>
           </div>
           <div className="cf-list">
@@ -103,36 +98,30 @@ function MultiSelectFilter({
 }
 
 export default function DashboardPage() {
+  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database">("ads");
   const [dateStart, setDateStart] = useState(isoDate(-29));
   const [dateStop,  setDateStop]  = useState(isoDate(0));
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
   const [selectedCampaigns,  setSelectedCampaigns]  = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database">("ads");
 
-  const { data: objectives }  = useObjectiveList();
-  // Ambil SEMUA campaign (tanpa filter objective) untuk referensi ID
-  const { data: allCampaigns } = useCampaignList([]);
-  // Campaign yang tampil di dropdown — difilter berdasarkan objective yang dipilih
+  const { data: objectives }   = useObjectiveList();
+  const { data: allCampaigns } = useCampaignList();
+
   const filteredCampaigns = useMemo(() => {
     if (!allCampaigns) return [];
     if (selectedObjectives.length === 0) return allCampaigns;
     return allCampaigns.filter((c) => c.objective && selectedObjectives.includes(c.objective));
   }, [allCampaigns, selectedObjectives]);
 
-  // Reset campaign selection ketika objective berubah
   const handleObjectiveChange = (vals: string[]) => {
     setSelectedObjectives(vals);
     setSelectedCampaigns([]);
   };
 
-  // effectiveCampaignIds: yang dipakai untuk filter data
-  // Logika: kalau ada campaign dipilih → pakai itu
-  //         kalau hanya objective dipilih → pakai semua campaign dari objective itu
-  //         kalau tidak ada yang dipilih → kosong (= semua data)
   const effectiveCampaignIds = useMemo(() => {
     if (selectedCampaigns.length > 0) return selectedCampaigns;
     if (selectedObjectives.length > 0) return filteredCampaigns.map((c) => c.id);
-    return [];
+    return [] as string[];
   }, [selectedCampaigns, selectedObjectives, filteredCampaigns]);
 
   const { totals, isLoading } = useKpiTotals(dateStart, dateStop, effectiveCampaignIds);
@@ -156,7 +145,6 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* ── Tab switcher ── */}
       <div className="tab-bar">
         <button className={`tab-btn ${activeTab === "ads" ? "active" : ""}`} onClick={() => setActiveTab("ads")}>
           📊 Meta Ads
@@ -169,8 +157,6 @@ export default function DashboardPage() {
         </button>
       </div>
 
-
-      {/* Filter bar */} 
       {activeTab === "ads" && (
         <>
           <div className="filter-bar">
@@ -227,6 +213,6 @@ export default function DashboardPage() {
 
       {activeTab === "instagram" && <InstagramTab />}
       {activeTab === "database"  && <DatabaseTab />}
-      </div>
+    </div>
   );
 }

@@ -35,7 +35,7 @@ export function EngagementChart({ dateStart, dateStop, campaignIds = [] }: Props
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis dataKey="date" tickFormatter={fmt} tick={{ fontSize: 12, fill: "var(--text-muted)" }} />
           <YAxis tick={{ fontSize: 12, fill: "var(--text-muted)" }} />
-          <Tooltip labelFormatter={(d) => fmt(String(d))} contentStyle={{ fontSize: 13 }} />
+          <Tooltip labelFormatter={fmt} contentStyle={{ fontSize: 13 }} />
           <Area type="monotone" dataKey="reactions" name="Reactions" stroke="var(--purple)" fill="url(#gR)" strokeWidth={2} />
           <Area type="monotone" dataKey="comments"  name="Comments"  stroke="var(--teal)"   fill="none"     strokeWidth={2} />
           <Area type="monotone" dataKey="shares"    name="Shares"    stroke="var(--orange)"  fill="none"     strokeWidth={1.5} strokeDasharray="4 3" />
