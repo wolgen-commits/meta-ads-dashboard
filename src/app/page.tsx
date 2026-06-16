@@ -5,6 +5,7 @@ import { SpendRoasChart }  from "@/components/SpendRoasChart";
 import { EngagementChart } from "@/components/EngagementChart";
 import { AudienceTable }   from "@/components/AudienceTable";
 import { SyncStatus }      from "@/components/SyncStatus";
+import { ThemeToggle }     from "@/components/ThemeToggle";
 import { InstagramTab }    from "@/components/InstagramTab";
 import { DatabaseTab }     from "@/components/DatabaseTab";
 import { useKpiTotals, useCampaignList, useObjectiveList } from "@/hooks/useMetaData";
@@ -143,6 +144,7 @@ export default function DashboardPage() {
         </div>
         <div className="dash-controls">
           <SyncStatus />
+          <ThemeToggle />
         </div>
       </header>
 

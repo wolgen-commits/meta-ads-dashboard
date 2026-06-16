@@ -59,7 +59,7 @@ export function AudienceTable({ campaignIds = [] }: { campaignIds?: string[] }) 
                 </tr>
               ))}
               {(data ?? []).length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "#A1A1AA" }}>Belum ada data</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "var(--gray-400)" }}>Belum ada data</td></tr>
               )}
             </tbody>
           </table>

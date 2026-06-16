@@ -64,7 +64,7 @@ function AccountTab({ accountId }: { accountId: string }) {
         ) : (
           <div className="media-grid">
             {(media ?? []).map((m) => <MediaCard key={m.id} media={m} />)}
-            {(media ?? []).length === 0 && <p style={{ color: "#A1A1AA", fontSize: 14 }}>Belum ada data media.</p>}
+            {(media ?? []).length === 0 && <p style={{ color: "var(--gray-400)", fontSize: 14 }}>Belum ada data media.</p>}
           </div>
         )}
       </div>
@@ -77,7 +77,7 @@ export function InstagramTab() {
   const [activeAccount, setActiveAccount] = useState<string | null>(null);
 
   if (isLoading) return <div className="chart-skeleton" style={{ height: 200 }} />;
-  if (!accounts || accounts.length === 0) return <p style={{ color: "#A1A1AA" }}>Belum ada akun Instagram yang terhubung.</p>;
+  if (!accounts || accounts.length === 0) return <p style={{ color: "var(--gray-400)" }}>Belum ada akun Instagram yang terhubung.</p>;
 
   const current = activeAccount ?? accounts[0]?.id;
   const currentAccount = accounts.find((a) => a.id === current);
