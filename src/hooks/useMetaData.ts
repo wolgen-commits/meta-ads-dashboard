@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
-import type { CampaignDailySummary, CampaignEngagementDaily, AudienceInsight, AudienceTopSegment, SyncLog, MetaCampaign } from "@/types/database";
+import type { CampaignDailySummary, CampaignEngagementDaily, AudienceInsight, AudienceTopSegment, SyncLog, MetaCampaign, MetaAdset, MetaAd } from "@/types/database";
 
 const REVALIDATE = 5 * 60 * 1000;
 
@@ -38,19 +38,16 @@ export function useObjectiveList() {
   );
 }
 
-export function useCampaignSummary(dateStart: string, dateStop: string, campaignIds: string[] = []) {
-  return useSWR<CampaignDailySummary[]>(
-    ["campaign_summary", dateStart, dateStop, campaignIds.sort().join(",")],
+export function useAdsetList(campaignIds: string[] = []) {
+  const sorted = [...campaignIds].sort();
+  return useSWR<MetaAdset[]>(
+    ["adset_list", sorted.join(",")],
     async () => {
       let query = supabase
-        .from("v_campaign_daily_summary")
-        .select("*")
-        .gte("date_start", dateStart)
-        .lte("date_start", dateStop)
-        .order("date_start", { ascending: true });
-      if (campaignIds.length > 0) {
-        query = query.in("campaign_id", campaignIds);
-      }
+        .from("meta_adsets")
+        .select("id,name,campaign_id,status")
+        .order("name", { ascending: true });
+      if (sorted.length > 0) query = query.in("campaign_id", sorted);
       const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
@@ -59,18 +56,104 @@ export function useCampaignSummary(dateStart: string, dateStop: string, campaign
   );
 }
 
-export function useKpiTotals(dateStart: string, dateStop: string, campaignIds: string[] = []) {
-  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop, campaignIds);
+export function useAdList(adsetIds: string[] = [], campaignIds: string[] = []) {
+  const sortedAdsets = [...adsetIds].sort();
+  const sortedCampaigns = [...campaignIds].sort();
+  return useSWR<MetaAd[]>(
+    ["ad_list", sortedAdsets.join(","), sortedCampaigns.join(",")],
+    async () => {
+      let query = supabase
+        .from("meta_ads")
+        .select("id,name,adset_id,campaign_id,status")
+        .order("name", { ascending: true });
+      if (sortedAdsets.length > 0) query = query.in("adset_id", sortedAdsets);
+      else if (sortedCampaigns.length > 0) query = query.in("campaign_id", sortedCampaigns);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data ?? [];
+    },
+    { refreshInterval: REVALIDATE },
+  );
+}
+
+export function useCampaignSummary(
+  dateStart: string,
+  dateStop: string,
+  campaignIds: string[] = [],
+  adsetIds: string[] = [],
+  adIds: string[] = [],
+) {
+  const sc = [...campaignIds].sort();
+  const sa = [...adsetIds].sort();
+  const si = [...adIds].sort();
+  return useSWR<CampaignDailySummary[]>(
+    ["campaign_summary", dateStart, dateStop, sc.join(","), sa.join(","), si.join(",")],
+    async () => {
+      // When filtering by adset or ad, query ad_performance directly
+      if (sa.length > 0 || si.length > 0) {
+        type PerfRow = { campaign_id: string; date_start: string; impressions: number; reach: number; clicks: number; spend: number; purchases: number; purchase_value: number; leads: number };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: any = supabase
+          .from("ad_performance")
+          .select("campaign_id,date_start,impressions,reach,clicks,spend,purchases,purchase_value,leads")
+          .gte("date_start", dateStart)
+          .lte("date_start", dateStop);
+        if (si.length > 0) q = q.in("ad_id", si);
+        else if (sa.length > 0) q = q.in("adset_id", sa);
+        if (sc.length > 0) q = q.in("campaign_id", sc);
+        const { data: rawData, error } = await q as { data: PerfRow[] | null; error: { message: string } | null };
+        if (error) throw error;
+        const grouped: Record<string, CampaignDailySummary> = {};
+        for (const row of (rawData ?? [])) {
+          const key = `${row.campaign_id}|${row.date_start}`;
+          if (!grouped[key]) {
+            grouped[key] = {
+              campaign_id: row.campaign_id, campaign_name: row.campaign_id,
+              objective: null, date_start: row.date_start, month: row.date_start.slice(0, 7),
+              impressions: 0, reach: 0, clicks: 0, link_clicks: 0,
+              spend: 0, results: 0, result_value: 0, leads: 0,
+              post_engagement: 0, ctr: 0, cpc: 0, cost_per_lead: 0,
+            };
+          }
+          const g = grouped[key];
+          g.impressions  += row.impressions    ?? 0;
+          g.reach        += row.reach          ?? 0;
+          g.clicks       += row.clicks         ?? 0;
+          g.spend        += row.spend          ?? 0;
+          g.results      += row.purchases      ?? 0;
+          g.result_value += row.purchase_value ?? 0;
+          g.leads        += row.leads          ?? 0;
+        }
+        return Object.values(grouped).sort((a, b) => a.date_start.localeCompare(b.date_start));
+      }
+      // Default: use v_adperf_daily (campaign-level aggregated view)
+      let query = supabase
+        .from("v_adperf_daily")
+        .select("*")
+        .gte("date_start", dateStart)
+        .lte("date_start", dateStop)
+        .order("date_start", { ascending: true });
+      if (sc.length > 0) query = query.in("campaign_id", sc);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data ?? [];
+    },
+    { refreshInterval: REVALIDATE },
+  );
+}
+
+export function useKpiTotals(dateStart: string, dateStop: string, campaignIds: string[] = [], adsetIds: string[] = [], adIds: string[] = []) {
+  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop, campaignIds, adsetIds, adIds);
   const totals = data
     ? data.reduce(
         (acc, row) => ({
-          impressions:    acc.impressions    + (row.total_impressions ?? 0),
-          reach:          acc.reach          + (row.total_reach ?? 0),
-          clicks:         acc.clicks         + (row.total_clicks ?? 0),
-          spend:          acc.spend          + (row.total_spend ?? 0),
-          purchases:      acc.purchases      + (row.total_purchases ?? 0),
-          purchase_value: acc.purchase_value + (row.total_purchase_value ?? 0),
-          leads:          acc.leads          + (row.total_leads ?? 0),
+          impressions:    acc.impressions    + (row.impressions   ?? 0),
+          reach:          acc.reach          + (row.reach         ?? 0),
+          clicks:         acc.clicks         + (row.clicks        ?? 0),
+          spend:          acc.spend          + (row.spend         ?? 0),
+          purchases:      acc.purchases      + (row.results       ?? 0),
+          purchase_value: acc.purchase_value + (row.result_value  ?? 0),
+          leads:          acc.leads          + (row.leads         ?? 0),
         }),
         { impressions: 0, reach: 0, clicks: 0, spend: 0, purchases: 0, purchase_value: 0, leads: 0 },
       )
@@ -84,18 +167,21 @@ export function useKpiTotals(dateStart: string, dateStop: string, campaignIds: s
   return { totals: derived, error, isLoading };
 }
 
-export function useSpendChart(dateStart: string, dateStop: string, campaignIds: string[] = []) {
-  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop, campaignIds);
+export function useSpendChart(dateStart: string, dateStop: string, campaignIds: string[] = [], adsetIds: string[] = [], adIds: string[] = []) {
+  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop, campaignIds, adsetIds, adIds);
   const chartData = data
     ? Object.values(
         data.reduce<Record<string, { date: string; spend: number; roas: number; impressions: number }>>(
           (acc, row) => {
             const d = row.date_start;
             if (!acc[d]) acc[d] = { date: d, spend: 0, roas: 0, impressions: 0 };
-            acc[d].spend       += row.total_spend ?? 0;
-            acc[d].impressions += row.total_impressions ?? 0;
-            const s = acc[d].spend;
-            if (s > 0) acc[d].roas = ((acc[d].roas * (s - (row.total_spend ?? 0))) + ((row.roas ?? 0) * (row.total_spend ?? 0))) / s;
+            const rowSpend = row.spend ?? 0;
+            const prevSpend = acc[d].spend;
+            acc[d].spend       += rowSpend;
+            acc[d].impressions += row.impressions ?? 0;
+            const rowRoas = rowSpend > 0 ? (row.result_value ?? 0) / rowSpend : 0;
+            const newSpend = acc[d].spend;
+            if (newSpend > 0) acc[d].roas = ((acc[d].roas * prevSpend) + (rowRoas * rowSpend)) / newSpend;
             return acc;
           }, {},
         ),
@@ -104,22 +190,57 @@ export function useSpendChart(dateStart: string, dateStop: string, campaignIds: 
   return { chartData, error, isLoading };
 }
 
-export function useEngagementSummary(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+export function useEngagementSummary(dateStart: string, dateStop: string, campaignIds: string[] = [], adsetIds: string[] = [], adIds: string[] = []) {
+  const sc = [...campaignIds].sort();
+  const sa = [...adsetIds].sort();
+  const si = [...adIds].sort();
   return useSWR<CampaignEngagementDaily[]>(
-    ["engagement_summary", dateStart, dateStop, campaignIds.sort().join(",")],
+    ["engagement_summary", dateStart, dateStop, sc.join(","), sa.join(","), si.join(",")],
     async () => {
       let query = supabase
-        .from("v_campaign_engagement_daily")
-        .select("*")
+        .from("engagement_metrics")
+        .select("campaign_id,date_start,post_reactions,post_comments,post_shares,post_saves,video_views")
         .gte("date_start", dateStart)
         .lte("date_start", dateStop)
         .order("date_start", { ascending: true });
-      if (campaignIds.length > 0) {
-        query = query.in("campaign_id", campaignIds);
-      }
+      if (si.length > 0) query = query.in("ad_id", si);
+      else if (sa.length > 0) query = query.in("adset_id", sa);
+      else if (sc.length > 0) query = query.in("campaign_id", sc);
       const { data, error } = await query;
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as CampaignEngagementDaily[];
+    },
+    { refreshInterval: REVALIDATE },
+  );
+}
+
+export function useAudienceRaw(
+  breakdownType: string,
+  dateStart: string,
+  dateStop: string,
+  campaignIds: string[] = [],
+) {
+  const sortedIds = [...campaignIds].sort();
+  return useSWR<AudienceInsight[]>(
+    ["audience_raw", breakdownType, dateStart, dateStop, sortedIds.join(",")],
+    async () => {
+      const baseQuery = () =>
+        supabase
+          .from("audience_insights")
+          .select("*")
+          .eq("breakdown_type", breakdownType)
+          .gte("date_start", dateStart)
+          .lte("date_start", dateStop);
+      let q = baseQuery();
+      if (sortedIds.length > 0) q = q.in("campaign_id", sortedIds);
+      let { data, error } = await q;
+      if (error) throw error;
+      if ((!data || data.length === 0) && sortedIds.length > 0) {
+        const fb = await baseQuery();
+        if (fb.error) throw fb.error;
+        data = fb.data;
+      }
+      return (data ?? []) as AudienceInsight[];
     },
     { refreshInterval: REVALIDATE },
   );

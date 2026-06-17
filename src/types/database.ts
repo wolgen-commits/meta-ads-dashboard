@@ -3,6 +3,16 @@ export interface MetaCampaign {
   objective: string | null; status: string | null;
   daily_budget: number | null; synced_at: string; created_at: string;
 }
+export interface MetaAdset {
+  id: string; campaign_id: string; account_id: string;
+  name: string; status: string | null;
+  daily_budget: number | null; synced_at: string;
+}
+export interface MetaAd {
+  id: string; adset_id: string; campaign_id: string; account_id: string;
+  name: string; status: string | null;
+  creative_id: string | null; synced_at: string;
+}
 export interface AdPerformance {
   id: string; ad_id: string; adset_id: string; campaign_id: string;
   account_id: string; date_start: string; date_stop: string; hour: number | null;
@@ -30,16 +40,15 @@ export interface SyncLog {
 }
 export interface CampaignDailySummary {
   campaign_id: string; campaign_name: string; objective: string | null;
-  campaign_status: string | null; date_start: string; account_id: string;
-  total_impressions: number; total_reach: number; total_clicks: number;
-  total_spend: number; total_purchases: number; total_purchase_value: number;
-  total_leads: number; ctr_pct: number; cpc: number; roas: number;
+  date_start: string; month: string;
+  impressions: number; reach: number; clicks: number; link_clicks: number;
+  spend: number; results: number; result_value: number; leads: number;
+  post_engagement: number; ctr: number; cpc: number; cost_per_lead: number;
 }
 export interface CampaignEngagementDaily {
-  campaign_id: string; campaign_name: string; date_start: string; account_id: string;
-  total_engagement: number; total_reactions: number; total_comments: number;
-  total_shares: number; total_saves: number; total_video_views: number;
-  total_reach: number; engagement_rate_pct: number;
+  campaign_id: string; date_start: string;
+  post_reactions: number; post_comments: number; post_shares: number;
+  post_saves: number; video_views: number;
 }
 export interface AudienceTopSegment {
   campaign_id: string; campaign_name: string; breakdown_type: string;
@@ -51,15 +60,16 @@ export type Database = {
   public: {
     Tables: {
       meta_campaigns:     { Row: MetaCampaign;     Insert: MetaCampaign;     Update: Partial<MetaCampaign> };
+      meta_adsets:        { Row: MetaAdset;        Insert: MetaAdset;        Update: Partial<MetaAdset> };
+      meta_ads:           { Row: MetaAd;           Insert: MetaAd;           Update: Partial<MetaAd> };
       ad_performance:     { Row: AdPerformance;    Insert: AdPerformance;    Update: Partial<AdPerformance> };
       engagement_metrics: { Row: EngagementMetric; Insert: EngagementMetric; Update: Partial<EngagementMetric> };
       audience_insights:  { Row: AudienceInsight;  Insert: AudienceInsight;  Update: Partial<AudienceInsight> };
       meta_sync_log:      { Row: SyncLog;           Insert: SyncLog;          Update: Partial<SyncLog> };
     };
     Views: {
-      v_campaign_daily_summary:    { Row: CampaignDailySummary };
-      v_campaign_engagement_daily: { Row: CampaignEngagementDaily };
-      v_audience_top_segments:     { Row: AudienceTopSegment };
+      v_adperf_daily:          { Row: CampaignDailySummary };
+      v_audience_top_segments: { Row: AudienceTopSegment };
     };
   };
 };

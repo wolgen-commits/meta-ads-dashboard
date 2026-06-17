@@ -3,13 +3,13 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 import { useSpendChart } from "@/hooks/useMetaData";
 import { useTheme } from "@/hooks/useTheme";
 
-interface Props { dateStart: string; dateStop: string; campaignIds?: string[]; }
+interface Props { dateStart: string; dateStop: string; campaignIds?: string[]; adsetIds?: string[]; adIds?: string[]; }
 
 const fmt = (d: unknown) => new Date(String(d)).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 const idr = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
 
-export function SpendRoasChart({ dateStart, dateStop, campaignIds = [] }: Props) {
-  const { chartData, isLoading } = useSpendChart(dateStart, dateStop, campaignIds);
+export function SpendRoasChart({ dateStart, dateStop, campaignIds = [], adsetIds = [], adIds = [] }: Props) {
+  const { chartData, isLoading } = useSpendChart(dateStart, dateStop, campaignIds, adsetIds, adIds);
   const { theme } = useTheme();
   const gridColor = theme === "dark" ? "#34343A" : "#E5E5EA";
   const tickColor = theme === "dark" ? "#9B9BA3" : "#A1A1AA";

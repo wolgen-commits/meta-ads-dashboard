@@ -1,14 +1,17 @@
 "use client";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { KpiCard }         from "@/components/KpiCard";
-import { SpendRoasChart }  from "@/components/SpendRoasChart";
-import { EngagementChart } from "@/components/EngagementChart";
-import { AudienceTable }   from "@/components/AudienceTable";
-import { SyncStatus }      from "@/components/SyncStatus";
-import { ThemeToggle }     from "@/components/ThemeToggle";
-import { InstagramTab }    from "@/components/InstagramTab";
-import { DatabaseTab }     from "@/components/DatabaseTab";
-import { useKpiTotals, useCampaignList, useObjectiveList } from "@/hooks/useMetaData";
+import { KpiCard }            from "@/components/KpiCard";
+import { SpendRoasChart }     from "@/components/SpendRoasChart";
+import { EngagementChart }    from "@/components/EngagementChart";
+import { AgeChart }           from "@/components/AgeChart";
+import { DemographicChart }   from "@/components/DemographicChart";
+import { RegionChart }        from "@/components/RegionChart";
+import { GenderChart }        from "@/components/GenderChart";
+import { AudienceTable }      from "@/components/AudienceTable";
+import { SyncStatus }         from "@/components/SyncStatus";
+import { InstagramTab }       from "@/components/InstagramTab";
+import { DatabaseTab }        from "@/components/DatabaseTab";
+import { useKpiTotals, useCampaignList, useObjectiveList, useAdsetList, useAdList } from "@/hooks/useMetaData";
 
 const isoDate = (offset = 0) => {
   const d = new Date();
@@ -79,12 +82,9 @@ function MultiSelectFilter({
       </button>
       {open && (
         <div className="cf-dropdown">
-          <div className="cf-search-wrap cf-actions">
-            <button type="button" className="cf-all" onClick={() => onChange(options)}>
-              Pilih semua
-            </button>
-            <button type="button" className="cf-clear" onClick={() => onChange([])} disabled={selected.length === 0}>
-              Hapus pilihan
+          <div className="cf-search-wrap">
+            <button className="cf-all" onClick={() => onChange(allSelected ? options : [])}>
+              {allSelected ? "Pilih semua" : "Batalkan semua"}
             </button>
           </div>
           <div className="cf-list">
@@ -107,10 +107,8 @@ export default function DashboardPage() {
   const [dateStop,  setDateStop]  = useState(isoDate(0));
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
   const [selectedCampaigns,  setSelectedCampaigns]  = useState<string[]>([]);
-  const [audienceDateStart, setAudienceDateStart] = useState(isoDate(-540));
-  const [audienceDateStop, setAudienceDateStop] = useState(isoDate(0));
-  const [audienceObjectives, setAudienceObjectives] = useState<string[]>([]);
-  const [audienceCampaigns, setAudienceCampaigns] = useState<string[]>([]);
+  const [selectedAdsets,     setSelectedAdsets]     = useState<string[]>([]);
+  const [selectedAds,        setSelectedAds]        = useState<string[]>([]);
 
   const { data: objectives }   = useObjectiveList();
   const { data: allCampaigns } = useCampaignList();
@@ -121,45 +119,38 @@ export default function DashboardPage() {
     return allCampaigns.filter((c) => c.objective && selectedObjectives.includes(c.objective));
   }, [allCampaigns, selectedObjectives]);
 
-  const filteredAudienceCampaigns = useMemo(() => {
-    if (!allCampaigns) return [];
-    if (audienceObjectives.length === 0) return allCampaigns;
-    return allCampaigns.filter((c) => c.objective && audienceObjectives.includes(c.objective));
-  }, [allCampaigns, audienceObjectives]);
-
-  const handleObjectiveChange = (vals: string[]) => {
-    setSelectedObjectives(vals);
-    setSelectedCampaigns([]);
-  };
-
-  const handleAudienceObjectiveChange = (vals: string[]) => {
-    setAudienceObjectives(vals);
-    setAudienceCampaigns([]);
-  };
-
   const effectiveCampaignIds = useMemo(() => {
     if (selectedCampaigns.length > 0) return selectedCampaigns;
     if (selectedObjectives.length > 0) return filteredCampaigns.map((c) => c.id);
     return [] as string[];
   }, [selectedCampaigns, selectedObjectives, filteredCampaigns]);
 
-  const effectiveAudienceCampaignIds = useMemo(() => {
-    const totalCampaigns = allCampaigns?.length ?? 0;
-    if (audienceCampaigns.length > 0 && audienceCampaigns.length < totalCampaigns) return audienceCampaigns;
-    if (audienceObjectives.length > 0) {
-      const ids = filteredAudienceCampaigns.map((c) => c.id);
-      if (ids.length > 0 && ids.length < totalCampaigns) return ids;
-    }
-    return [] as string[];
-  }, [audienceCampaigns, audienceObjectives, filteredAudienceCampaigns, allCampaigns]);
+  const { data: allAdsets } = useAdsetList(effectiveCampaignIds);
+  const adsetIdsForAdQuery  = selectedAdsets.length > 0 ? selectedAdsets : (allAdsets?.map(a => a.id) ?? []);
+  const { data: allAds }    = useAdList(adsetIdsForAdQuery, effectiveCampaignIds);
 
-  const { totals, isLoading } = useKpiTotals(dateStart, dateStop, effectiveCampaignIds);
-  const costPerLead = totals && totals.leads > 0 ? totals.spend / totals.leads : 0;
+  // Effective IDs for data queries — more-specific filter wins
+  const effectiveAdsetIds = useMemo(() => (selectedAds.length > 0 ? [] : selectedAdsets), [selectedAdsets, selectedAds]);
+  const effectiveAdIds    = selectedAds;
 
-  const applyPreset = (days: number) => {
-    setDateStart(isoDate(-days + 1));
-    setDateStop(isoDate(0));
+  const handleObjectiveChange = (vals: string[]) => {
+    setSelectedObjectives(vals);
+    setSelectedCampaigns([]);
+    setSelectedAdsets([]);
+    setSelectedAds([]);
   };
+  const handleCampaignChange = (vals: string[]) => {
+    setSelectedCampaigns(vals);
+    setSelectedAdsets([]);
+    setSelectedAds([]);
+  };
+  const handleAdsetChange = (vals: string[]) => {
+    setSelectedAdsets(vals);
+    setSelectedAds([]);
+  };
+
+  const { totals, isLoading } = useKpiTotals(dateStart, dateStop, effectiveCampaignIds, effectiveAdsetIds, effectiveAdIds);
+  const costPerLead = totals && totals.leads > 0 ? totals.spend / totals.leads : 0;
 
   return (
     <div className="dashboard">
@@ -172,7 +163,6 @@ export default function DashboardPage() {
         </div>
         <div className="dash-controls">
           <SyncStatus />
-          <ThemeToggle />
         </div>
       </header>
 
@@ -201,11 +191,6 @@ export default function DashboardPage() {
               <label className="filter-label">Sampai</label>
               <input type="date" className="date-input" value={dateStop} min={dateStart} max={isoDate(0)} onChange={(e) => setDateStop(e.target.value)} />
             </div>
-            <div className="preset-group">
-              {[7, 14, 30].map((d) => (
-                <button key={d} className="preset-btn" onClick={() => applyPreset(d)}>{d} hari</button>
-              ))}
-            </div>
             <MultiSelectFilter
               label="jenis campaign"
               options={objectives ?? []}
@@ -217,8 +202,22 @@ export default function DashboardPage() {
               label="campaign"
               options={filteredCampaigns.map((c) => c.id)}
               selected={selectedCampaigns}
-              onChange={setSelectedCampaigns}
+              onChange={handleCampaignChange}
               formatLabel={(id) => filteredCampaigns.find((c) => c.id === id)?.name ?? id}
+            />
+            <MultiSelectFilter
+              label="adset"
+              options={(allAdsets ?? []).map((a) => a.id)}
+              selected={selectedAdsets}
+              onChange={handleAdsetChange}
+              formatLabel={(id) => allAdsets?.find((a) => a.id === id)?.name ?? id}
+            />
+            <MultiSelectFilter
+              label="ad"
+              options={(allAds ?? []).map((a) => a.id)}
+              selected={selectedAds}
+              onChange={setSelectedAds}
+              formatLabel={(id) => allAds?.find((a) => a.id === id)?.name ?? id}
             />
           </div>
 
@@ -233,45 +232,18 @@ export default function DashboardPage() {
             <KpiCard label="Leads"         value={totals ? num(totals.leads) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Leads"]} accent="success" />
           </section>
 
-          <section className="charts-row">
-            <SpendRoasChart  dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
-            <EngagementChart dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
+          <section className="charts-grid">
+            <SpendRoasChart   dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} adsetIds={effectiveAdsetIds} adIds={effectiveAdIds} />
+            <AgeChart         dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
+            <DemographicChart dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
+            <RegionChart      dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
+            <GenderChart      dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
+            <EngagementChart  dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} adsetIds={effectiveAdsetIds} adIds={effectiveAdIds} />
           </section>
 
           <section className="audience-section">
-            <div className="filter-bar audience-filter-bar">
-              <div className="filter-group">
-                <label className="filter-label">Dari</label>
-                <input type="date" className="date-input" value={audienceDateStart} max={audienceDateStop} onChange={(e) => setAudienceDateStart(e.target.value)} />
-              </div>
-              <div className="filter-group">
-                <label className="filter-label">Sampai</label>
-                <input type="date" className="date-input" value={audienceDateStop} min={audienceDateStart} max={isoDate(0)} onChange={(e) => setAudienceDateStop(e.target.value)} />
-              </div>
-              <div className="preset-group">
-                {[30, 90, 180, 540].map((d) => (
-                  <button key={d} className="preset-btn" onClick={() => { setAudienceDateStart(isoDate(-d)); setAudienceDateStop(isoDate(0)); }}>
-                    {d === 540 ? "18 bln" : d === 180 ? "6 bln" : d === 90 ? "90 hr" : "30 hr"}
-                  </button>
-                ))}
-              </div>
-              <MultiSelectFilter
-                label="jenis campaign"
-                options={objectives ?? []}
-                selected={audienceObjectives}
-                onChange={handleAudienceObjectiveChange}
-                formatLabel={(v) => OBJECTIVE_LABELS[v] ?? v}
-              />
-              <MultiSelectFilter
-                label="campaign"
-                options={filteredAudienceCampaigns.map((c) => c.id)}
-                selected={audienceCampaigns}
-                onChange={setAudienceCampaigns}
-                formatLabel={(id) => filteredAudienceCampaigns.find((c) => c.id === id)?.name ?? id}
-              />
-            </div>
-            <AudienceTable dateStart={audienceDateStart} dateStop={audienceDateStop} campaignIds={effectiveAudienceCampaignIds} />
-          </section>
+            <AudienceTable dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
+{/*  */}          </section>
         </>
       )}
 
