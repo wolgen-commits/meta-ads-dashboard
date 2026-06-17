@@ -19,6 +19,16 @@ const TABLES = [
 
 const PAGE_SIZE = 20;
 
+const TABLE_SORT: Record<string, string> = {
+  ad_performance:     "date_start",
+  engagement_metrics: "date_start",
+  audience_insights:  "date_start",
+  meta_sync_log:      "started_at",
+  ig_media:           "timestamp",
+  ig_media_insights:  "media_id",
+  ig_account_insights:"date",
+};
+
 function formatCell(val: unknown): string {
   if (val === null || val === undefined) return "—";
   if (typeof val === "boolean") return val ? "true" : "false";
@@ -38,8 +48,9 @@ export function DatabaseTab() {
   const [page,        setPage]        = useState(0);
   const [loading,     setLoading]     = useState(false);
   const [search,      setSearch]      = useState("");
+  const [queryError,  setQueryError]  = useState<string | null>(null);
 
-  useEffect(() => { setPage(0); setSearch(""); }, [activeTable]);
+  useEffect(() => { setPage(0); setSearch(""); setQueryError(null); }, [activeTable]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,18 +58,20 @@ export function DatabaseTab() {
       setLoading(true);
       const from = page * PAGE_SIZE;
       const to   = from + PAGE_SIZE - 1;
+      const orderCol = TABLE_SORT[activeTable] ?? "id";
       const { data: rows, error, count } = await supabase
         .from(activeTable)
         .select("*", { count: "exact" })
         .range(from, to)
-        .order("id", { ascending: false });
+        .order(orderCol, { ascending: false });
       if (!cancelled) {
-        if (error) { console.error(error); setData([]); setColumns([]); }
+        if (error) { setQueryError(error.message); setData([]); setColumns([]); setTotalCount(0); }
         else {
           setData(rows ?? []);
           setColumns(rows && rows.length > 0 ? Object.keys(rows[0]) : []);
           setTotalCount(count ?? 0);
         }
+        if (!error) setQueryError(null);
         setLoading(false);
       }
     }
@@ -92,6 +105,8 @@ export function DatabaseTab() {
       <div className="db-table-wrap">
         {loading ? (
           <div className="chart-skeleton" style={{ height: 300 }} />
+        ) : queryError ? (
+          <div className="db-empty" style={{ color: "var(--red-400, #f87171)" }}>Error: {queryError}</div>
         ) : filteredData.length === 0 ? (
           <div className="db-empty">Tidak ada data</div>
         ) : (

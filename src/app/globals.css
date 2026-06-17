@@ -487,7 +487,9 @@ body {
 }
 
 /* ── AUDIENCE TABLE ── */
-.audience-section { width: 100%; }
+.audience-section { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+.audience-filter-bar { align-items: flex-end; }
 
 .table-header {
   display: flex;

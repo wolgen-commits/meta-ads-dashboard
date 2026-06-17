@@ -107,6 +107,10 @@ export default function DashboardPage() {
   const [dateStop,  setDateStop]  = useState(isoDate(0));
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
   const [selectedCampaigns,  setSelectedCampaigns]  = useState<string[]>([]);
+  const [audienceDateStart, setAudienceDateStart] = useState(isoDate(-540));
+  const [audienceDateStop, setAudienceDateStop] = useState(isoDate(0));
+  const [audienceObjectives, setAudienceObjectives] = useState<string[]>([]);
+  const [audienceCampaigns, setAudienceCampaigns] = useState<string[]>([]);
 
   const { data: objectives }   = useObjectiveList();
   const { data: allCampaigns } = useCampaignList();
@@ -117,9 +121,20 @@ export default function DashboardPage() {
     return allCampaigns.filter((c) => c.objective && selectedObjectives.includes(c.objective));
   }, [allCampaigns, selectedObjectives]);
 
+  const filteredAudienceCampaigns = useMemo(() => {
+    if (!allCampaigns) return [];
+    if (audienceObjectives.length === 0) return allCampaigns;
+    return allCampaigns.filter((c) => c.objective && audienceObjectives.includes(c.objective));
+  }, [allCampaigns, audienceObjectives]);
+
   const handleObjectiveChange = (vals: string[]) => {
     setSelectedObjectives(vals);
     setSelectedCampaigns([]);
+  };
+
+  const handleAudienceObjectiveChange = (vals: string[]) => {
+    setAudienceObjectives(vals);
+    setAudienceCampaigns([]);
   };
 
   const effectiveCampaignIds = useMemo(() => {
@@ -127,6 +142,16 @@ export default function DashboardPage() {
     if (selectedObjectives.length > 0) return filteredCampaigns.map((c) => c.id);
     return [] as string[];
   }, [selectedCampaigns, selectedObjectives, filteredCampaigns]);
+
+  const effectiveAudienceCampaignIds = useMemo(() => {
+    const totalCampaigns = allCampaigns?.length ?? 0;
+    if (audienceCampaigns.length > 0 && audienceCampaigns.length < totalCampaigns) return audienceCampaigns;
+    if (audienceObjectives.length > 0) {
+      const ids = filteredAudienceCampaigns.map((c) => c.id);
+      if (ids.length > 0 && ids.length < totalCampaigns) return ids;
+    }
+    return [] as string[];
+  }, [audienceCampaigns, audienceObjectives, filteredAudienceCampaigns, allCampaigns]);
 
   const { totals, isLoading } = useKpiTotals(dateStart, dateStop, effectiveCampaignIds);
   const costPerLead = totals && totals.leads > 0 ? totals.spend / totals.leads : 0;
@@ -214,7 +239,38 @@ export default function DashboardPage() {
           </section>
 
           <section className="audience-section">
-            <AudienceTable campaignIds={effectiveCampaignIds} />
+            <div className="filter-bar audience-filter-bar">
+              <div className="filter-group">
+                <label className="filter-label">Dari</label>
+                <input type="date" className="date-input" value={audienceDateStart} max={audienceDateStop} onChange={(e) => setAudienceDateStart(e.target.value)} />
+              </div>
+              <div className="filter-group">
+                <label className="filter-label">Sampai</label>
+                <input type="date" className="date-input" value={audienceDateStop} min={audienceDateStart} max={isoDate(0)} onChange={(e) => setAudienceDateStop(e.target.value)} />
+              </div>
+              <div className="preset-group">
+                {[30, 90, 180, 540].map((d) => (
+                  <button key={d} className="preset-btn" onClick={() => { setAudienceDateStart(isoDate(-d)); setAudienceDateStop(isoDate(0)); }}>
+                    {d === 540 ? "18 bln" : d === 180 ? "6 bln" : d === 90 ? "90 hr" : "30 hr"}
+                  </button>
+                ))}
+              </div>
+              <MultiSelectFilter
+                label="jenis campaign"
+                options={objectives ?? []}
+                selected={audienceObjectives}
+                onChange={handleAudienceObjectiveChange}
+                formatLabel={(v) => OBJECTIVE_LABELS[v] ?? v}
+              />
+              <MultiSelectFilter
+                label="campaign"
+                options={filteredAudienceCampaigns.map((c) => c.id)}
+                selected={audienceCampaigns}
+                onChange={setAudienceCampaigns}
+                formatLabel={(id) => filteredAudienceCampaigns.find((c) => c.id === id)?.name ?? id}
+              />
+            </div>
+            <AudienceTable dateStart={audienceDateStart} dateStop={audienceDateStop} campaignIds={effectiveAudienceCampaignIds} />
           </section>
         </>
       )}
