@@ -79,9 +79,12 @@ function MultiSelectFilter({
       </button>
       {open && (
         <div className="cf-dropdown">
-          <div className="cf-search-wrap">
-            <button className="cf-all" onClick={() => onChange(allSelected ? options : [])}>
-              {allSelected ? "Pilih semua" : "Batalkan semua"}
+          <div className="cf-search-wrap cf-actions">
+            <button type="button" className="cf-all" onClick={() => onChange(options)}>
+              Pilih semua
+            </button>
+            <button type="button" className="cf-clear" onClick={() => onChange([])} disabled={selected.length === 0}>
+              Hapus pilihan
             </button>
           </div>
           <div className="cf-list">

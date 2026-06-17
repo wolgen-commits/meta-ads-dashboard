@@ -5,7 +5,7 @@ import { useTheme } from "@/hooks/useTheme";
 
 interface Props { dateStart: string; dateStop: string; campaignIds?: string[]; }
 
-const fmt = (d: string) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+const fmt = (d: unknown) => new Date(String(d)).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 const idr = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
 
 export function SpendRoasChart({ dateStart, dateStop, campaignIds = [] }: Props) {

@@ -286,7 +286,15 @@ body {
 
 .cf-search-wrap { padding: 8px 12px; border-bottom: 1px solid var(--gray-100); }
 
-.cf-all {
+.cf-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cf-all,
+.cf-clear {
   font-size: 12px;
   font-weight: 500;
   color: var(--magenta-600);
@@ -296,7 +304,17 @@ body {
   font-family: var(--font-sans);
 }
 
-.cf-all:hover { text-decoration: underline; }
+.cf-clear {
+  color: var(--gray-500);
+}
+
+.cf-clear:disabled {
+  color: var(--gray-300);
+  cursor: not-allowed;
+}
+
+.cf-all:hover,
+.cf-clear:not(:disabled):hover { text-decoration: underline; }
 
 .cf-list { max-height: 260px; overflow-y: auto; padding: 4px 0; }
 

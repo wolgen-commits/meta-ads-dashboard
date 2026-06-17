@@ -30,7 +30,8 @@ export function useObjectiveList() {
         .select("objective")
         .not("objective", "is", null);
       if (error) throw error;
-      const unique = [...new Set((data ?? []).map((d) => d.objective).filter(Boolean))] as string[];
+      const rows = (data ?? []) as Array<Pick<MetaCampaign, "objective">>;
+      const unique = [...new Set(rows.map((d) => d.objective).filter(Boolean))] as string[];
       return unique.sort();
     },
     { refreshInterval: REVALIDATE },
@@ -226,7 +227,7 @@ export function useIgSummary(accountId: string) {
         .select("likes,comments,shares,saved,reach")
         .eq("ig_account_id", accountId);
       if (error) throw error;
-      const rows = data ?? [];
+      const rows = (data ?? []) as Array<Pick<IgMediaInsight, "likes" | "comments" | "shares" | "saved" | "reach">>;
       const total_likes    = rows.reduce((s, r) => s + (r.likes ?? 0), 0);
       const total_comments = rows.reduce((s, r) => s + (r.comments ?? 0), 0);
       const total_shares   = rows.reduce((s, r) => s + (r.shares ?? 0), 0);
