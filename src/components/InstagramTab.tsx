@@ -195,25 +195,38 @@ export function InstagramTab() {
           ) : (
             <>
               <div className="ig-metric">
-                <span className="ig-metric-label">Tayangan</span>
-                <span className="ig-metric-value">{num(overview?.impressions ?? 0)}</span>
-                <GrowthBadge pct={overview?.impressionsGrowth} />
+                <span className="ig-metric-label">Jumlah konten</span>
+                <span className="ig-metric-value">{num(overview?.mediaCount ?? 0)}</span>
+                <GrowthBadge pct={overview?.mediaCountGrowth} />
               </div>
               <div className="ig-metric-divider" />
               <div className="ig-metric">
                 <span className="ig-metric-label">Jangkauan</span>
-                <span className="ig-metric-value">{num(overview?.reach ?? 0)}</span>
-                <GrowthBadge pct={overview?.reachGrowth} />
+                {overview?.noInsights
+                  ? <span className="ig-metric-value ig-metric-na">—</span>
+                  : <span className="ig-metric-value">{num(overview?.reach ?? 0)}</span>
+                }
+                {!overview?.noInsights && <GrowthBadge pct={overview?.reachGrowth} />}
               </div>
               <div className="ig-metric-divider" />
               <div className="ig-metric">
                 <span className="ig-metric-label">Interaksi konten</span>
-                <span className="ig-metric-value">{num(overview?.engagement ?? 0)}</span>
-                <GrowthBadge pct={overview?.engagementGrowth} />
+                {overview?.noInsights
+                  ? <span className="ig-metric-value ig-metric-na">—</span>
+                  : <span className="ig-metric-value">{num(overview?.engagement ?? 0)}</span>
+                }
+                {!overview?.noInsights && <GrowthBadge pct={overview?.engagementGrowth} />}
               </div>
             </>
           )}
         </div>
+
+        {/* Pesan keterbatasan data cerita */}
+        {!loadingOverview && overview?.noInsights && (
+          <p className="ig-no-insights-note">
+            Data jangkauan dan interaksi cerita hanya tersedia dalam 24 jam setelah tayang. Cerita yang lebih lama tidak dapat diambil dari API Meta.
+          </p>
+        )}
 
         {/* Chart + Breakdown panel */}
         <div className="ig-chart-layout">

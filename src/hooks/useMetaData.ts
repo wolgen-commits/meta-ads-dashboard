@@ -614,11 +614,12 @@ export function useIgContentOverview(
     ["ig_content_overview", accountId, dateStart, dateStop, contentType],
     async () => {
       const empty = {
-        impressions: 0, reach: 0, engagement: 0,
-        prevImpressions: 0, prevReach: 0, prevEngagement: 0,
-        impressionsGrowth: null as number | null,
-        reachGrowth:       null as number | null,
-        engagementGrowth:  null as number | null,
+        mediaCount: 0, reach: 0, engagement: 0,
+        prevMediaCount: 0, prevReach: 0, prevEngagement: 0,
+        mediaCountGrowth: null as number | null,
+        reachGrowth:      null as number | null,
+        engagementGrowth: null as number | null,
+        noInsights: false,
         byDate: [] as DayData[],
       };
       if (!accountId) return empty;
@@ -648,38 +649,39 @@ export function useIgContentOverview(
         if (mediaError) throw mediaError;
 
         const media = mediaData ?? [];
-        if (media.length === 0) return { impressions: 0, reach: 0, engagement: 0, byDate: [] as DayData[] };
+        if (media.length === 0) return { mediaCount: 0, reach: 0, engagement: 0, noInsights: false, byDate: [] as DayData[] };
 
         const { data: insightData, error: insightError } = await supabase
           .from("ig_media_insights")
-          .select("media_id,impressions,reach,likes,comments,shares,saved")
+          .select("media_id,reach,likes,comments,shares,saved")
           .in("media_id", media.map(m => m.id));
         if (insightError) throw insightError;
 
         const insMap = new Map((insightData ?? []).map((i: InsightRow) => [i.media_id, i]));
         const byDate: Record<string, DayData> = {};
-        let totalImpressions = 0, totalReach = 0, totalEngagement = 0;
+        let totalReach = 0, totalEngagement = 0;
 
         for (const m of media) {
           const date = m.timestamp.slice(0, 10);
           const ins  = insMap.get(m.id);
-          const imp  = ins?.impressions ?? 0;
-          const rch  = ins?.reach       ?? 0;
+          const rch  = ins?.reach ?? 0;
           const eng  = (ins?.likes ?? 0) + (ins?.comments ?? 0) + (ins?.shares ?? 0) + (ins?.saved ?? 0);
           if (!byDate[date]) byDate[date] = { date, impressions: 0, reach: 0, engagement: 0 };
-          byDate[date].impressions += imp;
-          byDate[date].reach       += rch;
-          byDate[date].engagement  += eng;
-          totalImpressions += imp;
+          byDate[date].reach      += rch;
+          byDate[date].engagement += eng;
           totalReach       += rch;
           totalEngagement  += eng;
         }
 
+        // noInsights: semua media ada tapi tak satu pun punya insight (kasus cerita kadaluarsa)
+        const noInsights = insightData !== null && insightData.length === 0 && media.length > 0;
+
         return {
-          impressions: totalImpressions,
-          reach:       totalReach,
-          engagement:  totalEngagement,
-          byDate:      Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date)),
+          mediaCount: media.length,
+          reach:      totalReach,
+          engagement: totalEngagement,
+          noInsights,
+          byDate:     Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date)),
         };
       }
 
@@ -694,16 +696,17 @@ export function useIgContentOverview(
       ]);
 
       return {
-        impressions:     curr.impressions,
-        reach:           curr.reach,
-        engagement:      curr.engagement,
-        prevImpressions: prev.impressions,
-        prevReach:       prev.reach,
-        prevEngagement:  prev.engagement,
-        impressionsGrowth: growth(curr.impressions, prev.impressions),
-        reachGrowth:       growth(curr.reach,       prev.reach),
-        engagementGrowth:  growth(curr.engagement,  prev.engagement),
-        byDate:          curr.byDate,
+        mediaCount:       curr.mediaCount,
+        reach:            curr.reach,
+        engagement:       curr.engagement,
+        prevMediaCount:   prev.mediaCount,
+        prevReach:        prev.reach,
+        prevEngagement:   prev.engagement,
+        mediaCountGrowth: growth(curr.mediaCount, prev.mediaCount),
+        reachGrowth:      growth(curr.reach,      prev.reach),
+        engagementGrowth: growth(curr.engagement, prev.engagement),
+        noInsights:       curr.noInsights,
+        byDate:           curr.byDate,
       };
     },
     { refreshInterval: REVALIDATE },
