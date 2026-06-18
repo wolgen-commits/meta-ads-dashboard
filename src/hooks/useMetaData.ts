@@ -1,14 +1,37 @@
 import useSWR from "swr";
+import { useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import type { CampaignDailySummary, CampaignEngagementDaily, AudienceInsight, AudienceTopSegment, SyncLog, MetaCampaign, MetaAdset, MetaAd } from "@/types/database";
 
 const REVALIDATE = 5 * 60 * 1000;
 
-// Ambil SEMUA campaign sekaligus — filtering dilakukan di komponen
-export function useCampaignList() {
+// Ambil campaign berdasarkan rentang tanggal atau semua jika tanggal kosong
+export function useCampaignList(dateStart?: string, dateStop?: string) {
   return useSWR<MetaCampaign[]>(
-    "campaign_list",
+    ["campaign_list", dateStart, dateStop],
     async () => {
+      if (dateStart && dateStop) {
+        // Ambil ID campaign yang aktif (mempunyai data performa) dalam rentang tanggal
+        const { data: perfData, error: perfError } = await supabase
+          .from("ad_performance")
+          .select("campaign_id")
+          .gte("date_start", dateStart)
+          .lte("date_start", dateStop);
+        if (perfError) throw perfError;
+
+        const rows = (perfData ?? []) as Array<{ campaign_id: string }>;
+        const activeCampaignIds = Array.from(new Set(rows.map((p) => p.campaign_id).filter(Boolean)));
+        if (activeCampaignIds.length === 0) return [];
+
+        const { data, error } = await supabase
+          .from("meta_campaigns")
+          .select("id,name,status,objective")
+          .in("id", activeCampaignIds)
+          .order("name", { ascending: true });
+        if (error) throw error;
+        return data ?? [];
+      }
+
       const { data, error } = await supabase
         .from("meta_campaigns")
         .select("id,name,status,objective")
@@ -38,11 +61,36 @@ export function useObjectiveList() {
   );
 }
 
-export function useAdsetList(campaignIds: string[] = []) {
+export function useAdsetList(dateStart?: string, dateStop?: string, campaignIds: string[] = []) {
   const sorted = [...campaignIds].sort();
   return useSWR<MetaAdset[]>(
-    ["adset_list", sorted.join(",")],
+    ["adset_list", dateStart, dateStop, sorted.join(",")],
     async () => {
+      if (dateStart && dateStop) {
+        let perfQuery = supabase
+          .from("ad_performance")
+          .select("adset_id")
+          .gte("date_start", dateStart)
+          .lte("date_start", dateStop);
+
+        if (sorted.length > 0) perfQuery = perfQuery.in("campaign_id", sorted);
+
+        const { data: perfData, error: perfError } = await perfQuery;
+        if (perfError) throw perfError;
+
+        const rows = (perfData ?? []) as Array<{ adset_id: string }>;
+        const activeAdsetIds = Array.from(new Set(rows.map((p) => p.adset_id).filter(Boolean)));
+        if (activeAdsetIds.length === 0) return [];
+
+        const { data, error } = await supabase
+          .from("meta_adsets")
+          .select("id,name,campaign_id,status")
+          .in("id", activeAdsetIds)
+          .order("name", { ascending: true });
+        if (error) throw error;
+        return data ?? [];
+      }
+
       let query = supabase
         .from("meta_adsets")
         .select("id,name,campaign_id,status")
@@ -232,7 +280,7 @@ export function useSpendChart(dateStart: string, dateStop: string, campaignIds: 
     { refreshInterval: REVALIDATE },
   );
 
-  // ROAS = spend / messaging_conversations (biaya per percakapan dimulai)
+  // CPA = spend / messaging_conversations (biaya per percakapan dimulai)
   const chartData = data
     ? Object.values(
         data.reduce<Record<string, { date: string; spend: number; conversations: number }>>(
@@ -246,28 +294,80 @@ export function useSpendChart(dateStart: string, dateStop: string, campaignIds: 
         ),
       )
       .sort((a, b) => a.date.localeCompare(b.date))
-      .map((d) => ({ ...d, roas: d.conversations > 0 ? d.spend / d.conversations : 0 }))
+      .map((d) => ({ ...d, cpa: d.conversations > 0 ? d.spend / d.conversations : 0 }))
     : [];
 
   return { chartData, error, isLoading };
 }
 
-export function useEngagementSummary(dateStart: string, dateStop: string, campaignIds: string[] = [], adsetIds: string[] = [], adIds: string[] = []) {
+export function useEngagementSummary(
+  dateStart: string,
+  dateStop: string,
+  campaignIds: string[] = [],
+  adsetIds: string[] = [],
+  adIds: string[] = [],
+  platform: string = "all"
+) {
   const sc = [...campaignIds].sort();
   const sa = [...adsetIds].sort();
   const si = [...adIds].sort();
   return useSWR<CampaignEngagementDaily[]>(
-    ["engagement_summary", dateStart, dateStop, sc.join(","), sa.join(","), si.join(",")],
+    ["engagement_summary", dateStart, dateStop, sc.join(","), sa.join(","), si.join(","), platform],
     async () => {
+      let activeAdIds: string[] = [];
+      const isPlatformFiltered = platform !== "all";
+
+      if (isPlatformFiltered) {
+        let q = supabase
+          .from("ad_breakdown_platform")
+          .select("ad_id")
+          .eq("publisher_platform", platform)
+          .gte("date_start", dateStart)
+          .lte("date_start", dateStop);
+
+        if (si.length > 0) {
+          q = q.in("ad_id", si);
+        } else if (sa.length > 0) {
+          const { data: adsInAdsets } = await supabase
+            .from("meta_ads")
+            .select("id")
+            .in("adset_id", sa);
+          const adRows = (adsInAdsets ?? []) as Array<{ id: string }>;
+          const adIdsInAdsets = adRows.map((a) => a.id);
+          if (adIdsInAdsets.length > 0) {
+            q = q.in("ad_id", adIdsInAdsets);
+          } else {
+            return []; // Tidak ada ad di adset ini
+          }
+        }
+
+        if (sc.length > 0) {
+          q = q.in("campaign_id", sc);
+        }
+
+        const { data: platRows, error: platErr } = await q;
+        if (platErr) throw platErr;
+
+        const rows = platRows as Array<{ ad_id: string }>;
+        activeAdIds = Array.from(new Set(rows.map((r) => r.ad_id).filter(Boolean)));
+        if (activeAdIds.length === 0) return [];
+      }
+
       let query = supabase
         .from("engagement_metrics")
         .select("campaign_id,date_start,post_reactions,post_comments,post_shares,post_saves,video_views")
         .gte("date_start", dateStart)
         .lte("date_start", dateStop)
         .order("date_start", { ascending: true });
-      if (si.length > 0) query = query.in("ad_id", si);
-      else if (sa.length > 0) query = query.in("adset_id", sa);
-      else if (sc.length > 0) query = query.in("campaign_id", sc);
+
+      if (isPlatformFiltered) {
+        query = query.in("ad_id", activeAdIds);
+      } else {
+        if (si.length > 0) query = query.in("ad_id", si);
+        else if (sa.length > 0) query = query.in("adset_id", sa);
+        if (sc.length > 0) query = query.in("campaign_id", sc);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as CampaignEngagementDaily[];
@@ -306,6 +406,72 @@ export function useAudienceRaw(
     },
     { refreshInterval: REVALIDATE },
   );
+}
+
+/**
+ * Seperti useAudienceRaw, tapi mengisi messaging_conversations secara proporsional
+ * dari data ad_performance (total per campaign+tanggal × bagian impresi segmen).
+ * Digunakan oleh chart breakdown agar tab "Percakapan" menampilkan data nyata.
+ */
+export function useAudienceWithMessaging(
+  breakdownType: string,
+  dateStart: string,
+  dateStop: string,
+  campaignIds: string[] = [],
+) {
+  const sortedIds = [...campaignIds].sort();
+  const sortedKey = sortedIds.join(",");
+
+  const { data: audienceData, isLoading: loadAud } = useAudienceRaw(
+    breakdownType, dateStart, dateStop, campaignIds,
+  );
+
+  // Total messaging_conversations per (campaign_id, date_start) dari ad_performance
+  const { data: mcTotals, isLoading: loadMc } = useSWR<Record<string, number>>(
+    ["mc_totals_by_day", dateStart, dateStop, sortedKey],
+    async () => {
+      type Row = { campaign_id: string; date_start: string; messaging_conversations: number | null };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = supabase
+        .from("ad_performance")
+        .select("campaign_id,date_start,messaging_conversations")
+        .gte("date_start", dateStart)
+        .lte("date_start", dateStop);
+      if (sortedIds.length > 0) q = q.in("campaign_id", sortedIds);
+      const { data, error } = await q as { data: Row[] | null; error: { message: string } | null };
+      if (error) throw error;
+      const totals: Record<string, number> = {};
+      for (const row of (data ?? [])) {
+        const key = `${row.campaign_id}|${row.date_start}`;
+        totals[key] = (totals[key] ?? 0) + (row.messaging_conversations ?? 0);
+      }
+      return totals;
+    },
+    { refreshInterval: REVALIDATE },
+  );
+
+  const enriched = useMemo((): AudienceInsight[] | undefined => {
+    if (!audienceData) return undefined;
+    if (!mcTotals)     return audienceData;
+
+    // Hitung total impresi per (campaign_id, date_start) dari breakdown ini
+    const totalImpr: Record<string, number> = {};
+    for (const row of audienceData) {
+      const k = `${row.campaign_id}|${row.date_start}`;
+      totalImpr[k] = (totalImpr[k] ?? 0) + (row.impressions ?? 0);
+    }
+
+    // Distribusikan messaging_conversations secara proporsional ke tiap segmen
+    return audienceData.map(row => {
+      const k         = `${row.campaign_id}|${row.date_start}`;
+      const imprTotal = totalImpr[k]  ?? 0;
+      const mcTotal   = mcTotals[k]   ?? 0;
+      const share     = imprTotal > 0 ? (row.impressions ?? 0) / imprTotal : 0;
+      return { ...row, messaging_conversations: Math.round(mcTotal * share) };
+    });
+  }, [audienceData, mcTotals]);
+
+  return { data: enriched, isLoading: loadAud || loadMc };
 }
 
 export function useAudienceSegments(
@@ -417,6 +583,7 @@ export interface IgMediaInsight {
   media_id: string; ig_account_id: string;
   likes: number; comments: number; shares: number; saved: number;
   reach: number; impressions: number; video_views: number;
+  plays: number; profile_visits: number;
 }
 
 export function useIgAccounts() {
@@ -431,66 +598,152 @@ export function useIgAccounts() {
   );
 }
 
-export function useIgTopMedia(accountId: string, limit = 12) {
-  return useSWR<(IgMedia & IgMediaInsight)[]>(
-    ["ig_top_media", accountId, limit],
+type ContentType = "semua" | "postingan" | "cerita";
+
+export function useIgContentOverview(
+  accountId: string,
+  dateStart: string,
+  dateStop: string,
+  contentType: ContentType,
+) {
+  type MediaRow   = { id: string; media_product_type: string; timestamp: string };
+  type InsightRow = { media_id: string; impressions: number; reach: number; likes: number; comments: number; shares: number; saved: number };
+  type DayData    = { date: string; impressions: number; reach: number; engagement: number };
+
+  return useSWR(
+    ["ig_content_overview", accountId, dateStart, dateStop, contentType],
     async () => {
-      const { data: mediaData, error: mediaError } = await supabase
+      if (!accountId) return { impressions: 0, reach: 0, engagement: 0, byDate: [] as DayData[] };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = supabase
         .from("ig_media")
-        .select("*")
+        .select("id,media_product_type,timestamp")
         .eq("ig_account_id", accountId)
-        .not("media_product_type", "eq", "STORY")
-        .order("timestamp", { ascending: false })
-        .limit(limit);
+        .gte("timestamp", `${dateStart}T00:00:00`)
+        .lte("timestamp", `${dateStop}T23:59:59`);
+
+      if (contentType === "postingan") q = q.in("media_product_type", ["FEED", "REELS"]);
+      else if (contentType === "cerita") q = q.eq("media_product_type", "STORY");
+
+      const { data: mediaData, error: mediaError } = await q as { data: MediaRow[] | null; error: { message: string } | null };
       if (mediaError) throw mediaError;
 
-      const mediaItems = mediaData ?? [];
-      if (mediaItems.length === 0) return [];
+      const media = mediaData ?? [];
+      if (media.length === 0) return { impressions: 0, reach: 0, engagement: 0, byDate: [] as DayData[] };
 
-      const mediaIds = mediaItems.map((m: IgMedia) => m.id);
       const { data: insightData, error: insightError } = await supabase
         .from("ig_media_insights")
-        .select("*")
-        .in("media_id", mediaIds);
+        .select("media_id,impressions,reach,likes,comments,shares,saved")
+        .in("media_id", media.map(m => m.id));
       if (insightError) throw insightError;
 
-      const insightsMap = new Map(
-        (insightData ?? []).map((i: IgMediaInsight) => [i.media_id, i])
-      );
+      const insMap = new Map((insightData ?? []).map((i: InsightRow) => [i.media_id, i]));
+      const byDate: Record<string, DayData> = {};
+      let totalImpressions = 0, totalReach = 0, totalEngagement = 0;
 
-      return mediaItems.map((m: IgMedia) => ({
-        ...m,
-        ...(insightsMap.get(m.id) ?? {}),
-      })) as (IgMedia & IgMediaInsight)[];
+      for (const m of media) {
+        const date = m.timestamp.slice(0, 10);
+        const ins  = insMap.get(m.id);
+        const imp  = ins?.impressions ?? 0;
+        const rch  = ins?.reach       ?? 0;
+        const eng  = (ins?.likes ?? 0) + (ins?.comments ?? 0) + (ins?.shares ?? 0) + (ins?.saved ?? 0);
+        if (!byDate[date]) byDate[date] = { date, impressions: 0, reach: 0, engagement: 0 };
+        byDate[date].impressions += imp;
+        byDate[date].reach       += rch;
+        byDate[date].engagement  += eng;
+        totalImpressions += imp;
+        totalReach       += rch;
+        totalEngagement  += eng;
+      }
+
+      return {
+        impressions: totalImpressions,
+        reach:       totalReach,
+        engagement:  totalEngagement,
+        byDate:      Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date)),
+      };
     },
     { refreshInterval: REVALIDATE },
   );
 }
 
-export function useIgSummary(accountId: string) {
-  return useSWR<{
-    total_likes: number; total_comments: number;
-    total_shares: number; total_saved: number;
-    total_reach: number; avg_engagement_rate: number;
-  }>(
-    ["ig_summary", accountId],
+type IgDayData = { date: string; total: number; organic: number; paid: number };
+
+export function useIgDailyChart(accountId: string, dateStart: string, dateStop: string) {
+  return useSWR<IgDayData[]>(
+    ["ig_daily_chart", accountId, dateStart, dateStop],
     async () => {
-      const { data, error } = await supabase
+      if (!accountId) return [];
+
+      // Query 1: account-level daily impressions dari ig_account_insights
+      const { data: acctData, error: acctError } = await supabase
+        .from("ig_account_insights")
+        .select("date,impressions")
+        .eq("ig_account_id", accountId)
+        .gte("date", dateStart)
+        .lte("date", dateStop)
+        .order("date", { ascending: true });
+      if (acctError) throw acctError;
+
+      // Query 2: paid impressions dari Instagram placements di ad_breakdown_platform
+      const { data: paidData, error: paidError } = await supabase
+        .from("ad_breakdown_platform")
+        .select("date_start,impressions")
+        .eq("publisher_platform", "instagram")
+        .gte("date_start", dateStart)
+        .lte("date_start", dateStop);
+      if (paidError) throw paidError;
+
+      const paidByDate: Record<string, number> = {};
+      for (const row of (paidData ?? []) as { date_start: string; impressions: number }[]) {
+        paidByDate[row.date_start] = (paidByDate[row.date_start] ?? 0) + (row.impressions ?? 0);
+      }
+
+      return ((acctData ?? []) as { date: string; impressions: number }[]).map(row => {
+        const total = row.impressions ?? 0;
+        const paid  = paidByDate[row.date] ?? 0;
+        return { date: row.date, total, paid, organic: Math.max(0, total - paid) };
+      });
+    },
+    { refreshInterval: REVALIDATE },
+  );
+}
+
+export function useIgTopMedia(accountId: string, dateStart: string, dateStop: string, limit = 10) {
+  return useSWR<(IgMedia & IgMediaInsight)[]>(
+    ["ig_top_media", accountId, dateStart, dateStop, limit],
+    async () => {
+      if (!accountId) return [];
+
+      const { data: mediaData, error: mediaError } = await supabase
+        .from("ig_media")
+        .select("*")
+        .eq("ig_account_id", accountId)
+        .gte("timestamp", `${dateStart}T00:00:00`)
+        .lte("timestamp", `${dateStop}T23:59:59`)
+        .not("media_product_type", "eq", "STORY")
+        .order("timestamp", { ascending: false })
+        .limit(limit * 3);
+      if (mediaError) throw mediaError;
+
+      const mediaItems = (mediaData ?? []) as IgMedia[];
+      if (mediaItems.length === 0) return [];
+
+      const { data: insightData, error: insightError } = await supabase
         .from("ig_media_insights")
-        .select("likes,comments,shares,saved,reach")
-        .eq("ig_account_id", accountId);
-      if (error) throw error;
-      const rows = (data ?? []) as Array<Pick<IgMediaInsight, "likes" | "comments" | "shares" | "saved" | "reach">>;
-      const total_likes    = rows.reduce((s, r) => s + (r.likes ?? 0), 0);
-      const total_comments = rows.reduce((s, r) => s + (r.comments ?? 0), 0);
-      const total_shares   = rows.reduce((s, r) => s + (r.shares ?? 0), 0);
-      const total_saved    = rows.reduce((s, r) => s + (r.saved ?? 0), 0);
-      const total_reach    = rows.reduce((s, r) => s + (r.reach ?? 0), 0);
-      const total_eng      = total_likes + total_comments + total_shares + total_saved;
-      return {
-        total_likes, total_comments, total_shares, total_saved, total_reach,
-        avg_engagement_rate: total_reach > 0 ? (total_eng / total_reach) * 100 : 0,
-      };
+        .select("*")
+        .in("media_id", mediaItems.map(m => m.id));
+      if (insightError) throw insightError;
+
+      const insightsMap = new Map(
+        (insightData ?? []).map((i: IgMediaInsight) => [i.media_id, i]),
+      );
+
+      return mediaItems
+        .map(m => ({ ...m, ...(insightsMap.get(m.id) ?? {}) }) as IgMedia & IgMediaInsight)
+        .sort((a, b) => (b.reach ?? 0) - (a.reach ?? 0))
+        .slice(0, limit);
     },
     { refreshInterval: REVALIDATE },
   );

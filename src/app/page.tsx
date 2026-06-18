@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { KpiCard }            from "@/components/KpiCard";
-import { SpendRoasChart }     from "@/components/SpendRoasChart";
+import { SpendCpaChart }      from "@/components/SpendCpaChart";
 import { EngagementChart }    from "@/components/EngagementChart";
 import { AgeChart }           from "@/components/AgeChart";
 import { DemographicChart }   from "@/components/DemographicChart";
@@ -10,7 +10,8 @@ import { PlatformMediaChart } from "@/components/PlatformMediaChart";
 import { SyncStatus }         from "@/components/SyncStatus";
 import { InstagramTab }       from "@/components/InstagramTab";
 import { DatabaseTab }        from "@/components/DatabaseTab";
-import { useKpiTotals, useCampaignList, useObjectiveList, useAdsetList, useAdList } from "@/hooks/useMetaData";
+import { MetaAdLibraryTab }  from "@/components/MetaAdLibraryTab";
+import { useKpiTotals, useCampaignList, useAdsetList, useAdList } from "@/hooks/useMetaData";
 
 const isoDate = (offset = 0) => {
   const d = new Date();
@@ -106,16 +107,22 @@ function MultiSelectFilter({
 }
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database">("ads");
+  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database" | "ad-library">("ads");
   const [dateStart, setDateStart] = useState(isoDate(-29));
   const [dateStop,  setDateStop]  = useState(isoDate(0));
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
   const [selectedCampaigns,  setSelectedCampaigns]  = useState<string[]>([]);
   const [selectedAdsets,     setSelectedAdsets]     = useState<string[]>([]);
   const [selectedAds,        setSelectedAds]        = useState<string[]>([]);
+  const [metricTab, setMetricTab] = useState<"impressions" | "reach" | "messaging_conversations">("impressions");
 
-  const { data: objectives }   = useObjectiveList();
-  const { data: allCampaigns } = useCampaignList();
+  const { data: allCampaigns } = useCampaignList(dateStart, dateStop);
+
+  const objectives = useMemo(() => {
+    if (!allCampaigns) return [];
+    const unique = [...new Set(allCampaigns.map((c) => c.objective).filter(Boolean))] as string[];
+    return unique.sort();
+  }, [allCampaigns]);
 
   const filteredCampaigns = useMemo(() => {
     if (!allCampaigns) return [];
@@ -129,13 +136,52 @@ export default function DashboardPage() {
     return [] as string[];
   }, [selectedCampaigns, selectedObjectives, filteredCampaigns]);
 
-  const { data: allAdsets } = useAdsetList(effectiveCampaignIds);
+  const { data: allAdsets } = useAdsetList(dateStart, dateStop, effectiveCampaignIds);
   const adsetIdsForAdQuery  = selectedAdsets.length > 0 ? selectedAdsets : (allAdsets?.map(a => a.id) ?? []);
   const { data: allAds }    = useAdList(adsetIdsForAdQuery, effectiveCampaignIds);
+
+  // Bersihkan selected objectives jika tidak ada lagi di objectives (akibat perubahan tanggal)
+  useEffect(() => {
+    if (!objectives) return;
+    const activeObjectives = new Set(objectives);
+    setSelectedObjectives((prev) => prev.filter((obj) => activeObjectives.has(obj)));
+  }, [objectives]);
+
+  // Bersihkan selected campaigns jika tidak ada lagi di filteredCampaigns (akibat perubahan tanggal atau tipe campaign)
+  useEffect(() => {
+    if (!filteredCampaigns) return;
+    const activeIds = new Set(filteredCampaigns.map((c) => c.id));
+    setSelectedCampaigns((prev) => prev.filter((id) => activeIds.has(id)));
+  }, [filteredCampaigns]);
+
+  // Bersihkan selected adsets jika tidak ada lagi di allAdsets (akibat perubahan campaign)
+  useEffect(() => {
+    if (!allAdsets) return;
+    const activeIds = new Set(allAdsets.map((a) => a.id));
+    setSelectedAdsets((prev) => prev.filter((id) => activeIds.has(id)));
+  }, [allAdsets]);
+
+  // Bersihkan selected ads jika tidak ada lagi di allAds (akibat perubahan adset atau campaign)
+  useEffect(() => {
+    if (!allAds) return;
+    const activeIds = new Set(allAds.map((a) => a.id));
+    setSelectedAds((prev) => prev.filter((id) => activeIds.has(id)));
+  }, [allAds]);
 
   // Effective IDs for data queries — more-specific filter wins
   const effectiveAdsetIds = useMemo(() => (selectedAds.length > 0 ? [] : selectedAdsets), [selectedAdsets, selectedAds]);
   const effectiveAdIds    = selectedAds;
+
+  // Campaign IDs untuk breakdown charts — diperluas jika user filter adset/ad
+  const breakdownCampaignIds = useMemo(() => {
+    if (selectedAds.length > 0) {
+      return [...new Set(allAds?.filter(a => selectedAds.includes(a.id)).map(a => a.campaign_id) ?? [])];
+    }
+    if (selectedAdsets.length > 0) {
+      return [...new Set(allAdsets?.filter(a => selectedAdsets.includes(a.id)).map(a => a.campaign_id) ?? [])];
+    }
+    return effectiveCampaignIds;
+  }, [selectedAds, selectedAdsets, allAds, allAdsets, effectiveCampaignIds]);
 
   const handleObjectiveChange = (vals: string[]) => {
     setSelectedObjectives(vals);
@@ -179,6 +225,9 @@ export default function DashboardPage() {
         </button>
         <button className={`tab-btn ${activeTab === "database" ? "active" : ""}`} onClick={() => setActiveTab("database")}>
           Database
+        </button>
+        <button className={`tab-btn ${activeTab === "ad-library" ? "active" : ""}`} onClick={() => setActiveTab("ad-library")}>
+          Ad Library
         </button>
       </div>
 
@@ -235,20 +284,38 @@ export default function DashboardPage() {
             <KpiCard label="CPM"           value={totals ? idr(totals.cpm) : "—"} sub="per 1.000 tayang" loading={isLoading} description={KPI_DESCRIPTIONS["CPM"]} />
           </section>
 
+          <div className="metric-tab-bar">
+            <span className="metric-tab-label">Tampilkan segmen berdasarkan:</span>
+            {([
+              { key: "impressions",             label: "Impresi" },
+              { key: "reach",                   label: "Jangkauan" },
+              { key: "messaging_conversations", label: "Percakapan Pesan Dimulai" },
+            ] as const).map(({ key, label }) => (
+              <button
+                key={key}
+                className={`breakdown-tab${metricTab === key ? " active" : ""}`}
+                onClick={() => setMetricTab(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <section className="charts-grid">
-            <SpendRoasChart   dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} adsetIds={effectiveAdsetIds} adIds={effectiveAdIds} />
-            <AgeChart         dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
-            <DemographicChart dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
-            <RegionChart      dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
-            <PlatformMediaChart dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
-            <EngagementChart  dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} adsetIds={effectiveAdsetIds} adIds={effectiveAdIds} />
+            <SpendCpaChart      dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} adsetIds={effectiveAdsetIds} adIds={effectiveAdIds} />
+            <AgeChart           dateStart={dateStart} dateStop={dateStop} campaignIds={breakdownCampaignIds} metricKey={metricTab} />
+            <DemographicChart   dateStart={dateStart} dateStop={dateStop} campaignIds={breakdownCampaignIds} metricKey={metricTab} />
+            <RegionChart        dateStart={dateStart} dateStop={dateStop} campaignIds={breakdownCampaignIds} metricKey={metricTab} />
+            <PlatformMediaChart dateStart={dateStart} dateStop={dateStop} campaignIds={breakdownCampaignIds} metricKey={metricTab} />
+            <EngagementChart    dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} adsetIds={effectiveAdsetIds} adIds={effectiveAdIds} />
           </section>
 
         </>
       )}
 
-      {activeTab === "instagram" && <InstagramTab />}
-      {activeTab === "database"  && <DatabaseTab />}
+      {activeTab === "instagram"  && <InstagramTab />}
+      {activeTab === "database"   && <DatabaseTab />}
+      {activeTab === "ad-library" && <MetaAdLibraryTab />}
     </div>
   );
 }

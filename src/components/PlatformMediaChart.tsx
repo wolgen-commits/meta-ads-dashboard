@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { useAudienceRaw } from "@/hooks/useMetaData";
+import { useAudienceWithMessaging } from "@/hooks/useMetaData";
 import { useTheme } from "@/hooks/useTheme";
 
-interface Props { dateStart: string; dateStop: string; campaignIds?: string[]; }
+type MetricKey = "impressions" | "reach" | "messaging_conversations";
+interface Props { dateStart: string; dateStop: string; campaignIds?: string[]; metricKey?: MetricKey; }
 
 type Tab = "platform" | "device";
 
@@ -29,34 +30,42 @@ const DEVICE_LABEL: Record<string, string> = {
   android_tablet:   "Android Tablet",
 };
 
-export function PlatformMediaChart({ dateStart, dateStop, campaignIds = [] }: Props) {
+const METRIC_LABEL: Record<MetricKey, string> = { impressions: "Impresi", reach: "Jangkauan", messaging_conversations: "Percakapan" };
+
+export function PlatformMediaChart({ dateStart, dateStop, campaignIds = [], metricKey = "impressions" }: Props) {
   const [active, setActive] = useState<Tab>("platform");
 
-  const { data: platformData, isLoading: loadingPlatform } = useAudienceRaw("publisher_platform", dateStart, dateStop, campaignIds);
-  const { data: deviceData, isLoading: loadingDevice } = useAudienceRaw("impression_device", dateStart, dateStop, campaignIds);
+  const { data: platformData, isLoading: loadingPlatform } = useAudienceWithMessaging("publisher_platform", dateStart, dateStop, campaignIds);
+  const { data: deviceData, isLoading: loadingDevice } = useAudienceWithMessaging("impression_device", dateStart, dateStop, campaignIds);
 
   const { theme } = useTheme();
   const gridColor = theme === "dark" ? "#34343A" : "#E5E5EA";
   const tickColor = theme === "dark" ? "#9B9BA3" : "#A1A1AA";
   const tooltipBg = theme === "dark" ? "#1F1F22" : "#FFFFFF";
 
+  const metricLabel = METRIC_LABEL[metricKey];
   const isLoading = active === "platform" ? loadingPlatform : loadingDevice;
   const rawData   = active === "platform" ? platformData : deviceData;
   const labelMap  = active === "platform" ? PLATFORM_LABEL : DEVICE_LABEL;
 
-  const aggregated = (rawData ?? []).reduce<Record<string, { name: string; impressions: number; spend: number }>>(
+  const aggregated = (rawData ?? []).reduce<Record<string, { name: string; value: number; spend: number }>>(
     (acc, row) => {
       const key = (active === "platform" ? row.publisher_platform : row.impression_device) ?? "unknown";
       const label = labelMap[key] ?? key;
-      if (!acc[key]) acc[key] = { name: label, impressions: 0, spend: 0 };
-      acc[key].impressions += row.impressions ?? 0;
-      acc[key].spend       += row.spend       ?? 0;
+      if (!acc[key]) acc[key] = { name: label, value: 0, spend: 0 };
+      const v = metricKey === "reach"
+        ? (row.reach ?? 0)
+        : metricKey === "messaging_conversations"
+          ? (row.messaging_conversations ?? 0)
+          : (row.impressions ?? 0);
+      acc[key].value += v;
+      acc[key].spend += row.spend ?? 0;
       return acc;
     },
     {},
   );
 
-  const chartData = Object.values(aggregated).sort((a, b) => b.impressions - a.impressions);
+  const chartData = Object.values(aggregated).sort((a, b) => b.value - a.value);
 
   return (
     <div className="chart-card">
@@ -99,10 +108,10 @@ export function PlatformMediaChart({ dateStart, dateStop, campaignIds = [] }: Pr
               width={40}
             />
             <Tooltip
-              formatter={(v: unknown) => [num(Number(v ?? 0)), "Impresi"]}
+              formatter={(v: unknown) => [num(Number(v ?? 0)), metricLabel]}
               contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
             />
-            <Bar dataKey="impressions" name="Impresi" radius={[3, 3, 0, 0]}>
+            <Bar dataKey="value" name={metricLabel} radius={[3, 3, 0, 0]}>
               {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
             </Bar>
           </BarChart>

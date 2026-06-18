@@ -10,7 +10,7 @@ const idr = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", c
 const shortIdr = (v: number) =>
   v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}rb` : String(Math.round(v));
 
-export function SpendRoasChart({ dateStart, dateStop, campaignIds = [], adsetIds = [], adIds = [] }: Props) {
+export function SpendCpaChart({ dateStart, dateStop, campaignIds = [], adsetIds = [], adIds = [] }: Props) {
   const { chartData, isLoading } = useSpendChart(dateStart, dateStop, campaignIds, adsetIds, adIds);
   const { theme } = useTheme();
   const gridColor = theme === "dark" ? "#34343A" : "#E5E5EA";
@@ -22,8 +22,8 @@ export function SpendRoasChart({ dateStart, dateStop, campaignIds = [], adsetIds
   return (
     <div className="chart-card">
       <div className="chart-header-row">
-        <h3 className="chart-title" style={{ marginBottom: 0 }}>Spend Harian & ROAS</h3>
-        <span style={{ fontSize: 10, color: tickColor, fontFamily: "DM Sans" }}>ROAS = Spend ÷ Percakapan</span>
+        <h3 className="chart-title" style={{ marginBottom: 0 }}>Spend Harian & CPA</h3>
+        <span style={{ fontSize: 10, color: tickColor, fontFamily: "DM Sans" }}>CPA = Spend ÷ Percakapan</span>
       </div>
       <ResponsiveContainer width="100%" height={260}>
         <ComposedChart data={chartData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
@@ -35,23 +35,23 @@ export function SpendRoasChart({ dateStart, dateStop, campaignIds = [], adsetIds
             tick={{ fontSize: 11, fill: tickColor, fontFamily: "DM Sans" }}
           />
           <YAxis
-            yAxisId="roas"
+            yAxisId="cpa"
             orientation="right"
             tickFormatter={shortIdr}
             tick={{ fontSize: 11, fill: tickColor, fontFamily: "DM Sans" }}
           />
           <Tooltip
             formatter={(value, name) =>
-              name === "spend"
+              name === "Spend"
                 ? [idr(Number(value)), "Spend"]
-                : [idr(Number(value)), "ROAS (Biaya/Percakapan)"]
+                : [idr(Number(value)), "CPA (Biaya/Percakapan)"]
             }
             labelFormatter={fmt}
             contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
           />
           <Legend wrapperStyle={{ fontSize: 12, fontFamily: "DM Sans" }} />
           <Bar  yAxisId="spend" dataKey="spend" name="Spend"             fill="#BB2649" radius={[4, 4, 0, 0]} opacity={0.85} />
-          <Line yAxisId="roas"  dataKey="roas"  name="ROAS (Rp/Percakapan)" stroke="#2563EB" strokeWidth={2} dot={false} />
+          <Line yAxisId="cpa"   dataKey="cpa"   name="CPA (Rp/Percakapan)" stroke="#2563EB" strokeWidth={2} dot={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </div>

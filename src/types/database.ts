@@ -32,7 +32,9 @@ export interface AudienceInsight {
   age: string | null; gender: string | null; region: string | null;
   device_platform: string | null; impression_device: string | null;
   placement: string | null; publisher_platform: string | null;
-  impressions: number; reach: number; clicks: number; spend: number; ctr: number | null; synced_at: string;
+  impressions: number; reach: number; clicks: number; spend: number; ctr: number | null;
+  messaging_conversations: number | null;
+  synced_at: string;
 }
 export interface SyncLog {
   id: string; sync_type: string; status: string; records_upserted: number;
@@ -57,6 +59,44 @@ export interface AudienceTopSegment {
   device_platform: string | null; placement: string | null;
   impressions: number; clicks: number; spend: number; avg_ctr: number;
 }
+export interface IgAccountInsight {
+  id: string;
+  ig_account_id: string;
+  date: string;
+  followers_count: number;
+  reach: number;
+  impressions: number;
+  profile_views: number;
+  website_clicks: number;
+  likes_count: number;
+  comments_count: number;
+  shares_count: number;
+  saves_count: number;
+  synced_at: string;
+}
+
+export interface AdLibraryAd {
+  id: string;
+  page_id: string;
+  page_name: string;
+  ad_creation_time: string;
+  ad_delivery_start_time: string;
+  ad_delivery_stop_time: string | null;
+  ad_creative_bodies: string[] | null;
+  ad_creative_link_captions: string[] | null;
+  ad_creative_link_titles: string[] | null;
+  ad_snapshot_url: string;
+  currency: string | null;
+  funding_entity: string | null;
+  impressions: { lower_bound: number; upper_bound: number } | null;
+  spend: { lower_bound: number; upper_bound: number } | null;
+  publisher_platforms: string[] | null;
+}
+export interface AdLibraryResponse {
+  data: AdLibraryAd[];
+  paging?: { cursors: { before: string; after: string }; next?: string };
+}
+
 export type Database = {
   public: {
     Tables: {
