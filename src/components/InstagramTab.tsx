@@ -207,7 +207,7 @@ export function InstagramTab() {
             {loadingChart ? (
               <div className="chart-skeleton" style={{ height: 200 }} />
             ) : (dailyChart ?? []).length === 0 ? (
-              <div className="chart-empty" style={{ height: 200 }}>Belum ada data tayangan untuk periode ini</div>
+              <div className="chart-empty" style={{ height: 200 }}>Belum ada data jangkauan untuk periode ini</div>
             ) : (
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart
@@ -231,7 +231,7 @@ export function InstagramTab() {
                     contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
                   />
                   <Legend wrapperStyle={{ fontSize: 11, fontFamily: "DM Sans" }} />
-                  <Line type="monotone" dataKey="total"   name="Tayangan"      stroke="#1877F2" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="total"   name="Jangkauan"     stroke="#1877F2" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                   <Line type="monotone" dataKey="organic" name="Dari organik"  stroke="#00C6A7" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} strokeDasharray="4 2" />
                   <Line type="monotone" dataKey="paid"    name="Dari iklan"    stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} strokeDasharray="2 2" />
                 </LineChart>
@@ -240,7 +240,7 @@ export function InstagramTab() {
           </div>
 
           <div className="ig-breakdown-panel">
-            <p className="ig-breakdown-title">Perincian tayangan</p>
+            <p className="ig-breakdown-title">Perincian jangkauan</p>
             <p className="ig-breakdown-period">{fmtPeriod(dateStart, dateStop)}</p>
             {(() => {
               const totals = (dailyChart ?? []).reduce(
@@ -271,7 +271,7 @@ export function InstagramTab() {
       {/* ── Konten populer ── */}
       <div className="ig-popular-section">
         <div className="ig-popular-header">
-          <h3 className="ig-popular-title">Konten populer berdasarkan tayangan</h3>
+          <h3 className="ig-popular-title">Konten populer berdasarkan jangkauan</h3>
           <div className="ig-popular-actions">
             <button className="ig-action-btn">Promosikan konten</button>
             <a href={igUrl} target="_blank" rel="noopener noreferrer" className="ig-action-btn">

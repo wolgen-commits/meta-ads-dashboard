@@ -676,32 +676,32 @@ export function useIgDailyChart(accountId: string, dateStart: string, dateStop: 
     async () => {
       if (!accountId) return [];
 
-      // Query 1: account-level daily impressions dari ig_account_insights
+      // Query 1: daily reach dari ig_account_insights (impressions deprecated di v22.0)
       const { data: acctData, error: acctError } = await supabase
         .from("ig_account_insights")
-        .select("date,impressions")
+        .select("date,reach")
         .eq("ig_account_id", accountId)
         .gte("date", dateStart)
         .lte("date", dateStop)
         .order("date", { ascending: true });
       if (acctError) throw acctError;
 
-      // Query 2: paid impressions dari Instagram placements di ad_breakdown_platform
+      // Query 2: paid reach dari Instagram placements di ad_breakdown_platform
       const { data: paidData, error: paidError } = await supabase
         .from("ad_breakdown_platform")
-        .select("date_start,impressions")
+        .select("date_start,reach")
         .eq("publisher_platform", "instagram")
         .gte("date_start", dateStart)
         .lte("date_start", dateStop);
       if (paidError) throw paidError;
 
       const paidByDate: Record<string, number> = {};
-      for (const row of (paidData ?? []) as { date_start: string; impressions: number }[]) {
-        paidByDate[row.date_start] = (paidByDate[row.date_start] ?? 0) + (row.impressions ?? 0);
+      for (const row of (paidData ?? []) as { date_start: string; reach: number }[]) {
+        paidByDate[row.date_start] = (paidByDate[row.date_start] ?? 0) + (row.reach ?? 0);
       }
 
-      return ((acctData ?? []) as { date: string; impressions: number }[]).map(row => {
-        const total = row.impressions ?? 0;
+      return ((acctData ?? []) as { date: string; reach: number }[]).map(row => {
+        const total = row.reach ?? 0;
         const paid  = paidByDate[row.date] ?? 0;
         return { date: row.date, total, paid, organic: Math.max(0, total - paid) };
       });

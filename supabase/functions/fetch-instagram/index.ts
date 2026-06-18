@@ -239,44 +239,54 @@ Deno.serve(async (req: Request) => {
 
   // ── Sync account-level daily insights (@magentaindopack saja) ──────────
   async function syncAccountInsights(igAccountId: string): Promise<void> {
-    const until = Math.floor(Date.now() / 1000);
-    const since = until - 90 * 24 * 60 * 60;
-
-    const data = await apiFetchPaginated<{
-      name: string;
-      values: Array<{ value: number; end_time: string }>;
-    }>(`${igAccountId}/insights?metric=reach,profile_views&period=day&since=${since}&until=${until}`);
-    console.log(`Account insights raw count for ${igAccountId}: ${data.length}`);
-
-    if (data.length === 0) {
-      console.log(`No account insight data for ${igAccountId}`);
-      return;
-    }
+    // Meta API batasi max 30 hari per request — query 3 chunk x 28 hari (total ~84 hari)
+    // Hanya metric yang mendukung time series (values array) di v22.0
+    // profile_views/views/website_clicks hanya tersedia sebagai total_value aggregate
+    const CHUNK_DAYS = 28;
+    const NUM_CHUNKS = 3;
+    const nowSec = Math.floor(Date.now() / 1000);
 
     const byDate: Record<string, Record<string, number>> = {};
-    for (const metric of data) {
-      for (const v of (metric.values ?? [])) {
-        const date = v.end_time.slice(0, 10);
-        if (!byDate[date]) byDate[date] = {};
-        byDate[date][metric.name] = v.value ?? 0;
+
+    for (let i = 0; i < NUM_CHUNKS; i++) {
+      const chunkUntil = nowSec - i * CHUNK_DAYS * 86400;
+      const chunkSince = chunkUntil - CHUNK_DAYS * 86400;
+
+      const data = await apiFetchPaginated<{
+        name: string;
+        values: Array<{ value: number; end_time: string }>;
+      }>(`${igAccountId}/insights?metric=reach,follower_count&period=day&since=${chunkSince}&until=${chunkUntil}`);
+      console.log(`Account insights chunk ${i} count for ${igAccountId}: ${data.length}`);
+
+      for (const metric of data) {
+        for (const v of (metric.values ?? [])) {
+          const date = v.end_time.slice(0, 10);
+          if (!byDate[date]) byDate[date] = {};
+          byDate[date][metric.name] = v.value ?? 0;
+        }
       }
+
+      await new Promise((r) => setTimeout(r, 300));
     }
 
     const rows = Object.entries(byDate).map(([date, vals]) => ({
       ig_account_id:   igAccountId,
       date,
-      impressions:     vals.impressions   ?? 0,
-      reach:           vals.reach         ?? 0,
-      profile_views:   vals.profile_views ?? 0,
+      impressions:     0,
+      reach:           vals.reach           ?? 0,
+      profile_views:   0,
       website_clicks:  0,
-      followers_count: 0,
+      followers_count: vals.follower_count  ?? 0,
       likes_count:     0,
       comments_count:  0,
       shares_count:    0,
       saves_count:     0,
     }));
 
-    if (rows.length === 0) return;
+    if (rows.length === 0) {
+      console.log(`No account insight data for ${igAccountId}`);
+      return;
+    }
     const { error } = await supabase
       .from("ig_account_insights")
       .upsert(rows, { onConflict: "ig_account_id,date" });
