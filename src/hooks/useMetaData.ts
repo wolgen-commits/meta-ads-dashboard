@@ -613,55 +613,97 @@ export function useIgContentOverview(
   return useSWR(
     ["ig_content_overview", accountId, dateStart, dateStop, contentType],
     async () => {
-      if (!accountId) return { impressions: 0, reach: 0, engagement: 0, byDate: [] as DayData[] };
+      const empty = {
+        impressions: 0, reach: 0, engagement: 0,
+        prevImpressions: 0, prevReach: 0, prevEngagement: 0,
+        impressionsGrowth: null as number | null,
+        reachGrowth:       null as number | null,
+        engagementGrowth:  null as number | null,
+        byDate: [] as DayData[],
+      };
+      if (!accountId) return empty;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q: any = supabase
-        .from("ig_media")
-        .select("id,media_product_type,timestamp")
-        .eq("ig_account_id", accountId)
-        .gte("timestamp", `${dateStart}T00:00:00`)
-        .lte("timestamp", `${dateStop}T23:59:59`);
+      // Hitung periode sebelumnya (sama durasi, tepat sebelum dateStart)
+      const startMs   = new Date(dateStart).getTime();
+      const stopMs    = new Date(dateStop).getTime();
+      const durMs     = stopMs - startMs + 86_400_000; // inklusif
+      const prevStop  = new Date(startMs - 86_400_000);
+      const prevStart = new Date(startMs - durMs);
+      const prevStartStr = prevStart.toISOString().slice(0, 10);
+      const prevStopStr  = prevStop.toISOString().slice(0, 10);
 
-      if (contentType === "postingan") q = q.in("media_product_type", ["FEED", "REELS"]);
-      else if (contentType === "cerita") q = q.eq("media_product_type", "STORY");
+      async function fetchPeriod(from: string, to: string) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: any = supabase
+          .from("ig_media")
+          .select("id,media_product_type,timestamp")
+          .eq("ig_account_id", accountId)
+          .gte("timestamp", `${from}T00:00:00`)
+          .lte("timestamp", `${to}T23:59:59`);
 
-      const { data: mediaData, error: mediaError } = await q as { data: MediaRow[] | null; error: { message: string } | null };
-      if (mediaError) throw mediaError;
+        if (contentType === "postingan") q = q.in("media_product_type", ["FEED", "REELS"]);
+        else if (contentType === "cerita") q = q.eq("media_product_type", "STORY");
 
-      const media = mediaData ?? [];
-      if (media.length === 0) return { impressions: 0, reach: 0, engagement: 0, byDate: [] as DayData[] };
+        const { data: mediaData, error: mediaError } = await q as { data: MediaRow[] | null; error: { message: string } | null };
+        if (mediaError) throw mediaError;
 
-      const { data: insightData, error: insightError } = await supabase
-        .from("ig_media_insights")
-        .select("media_id,impressions,reach,likes,comments,shares,saved")
-        .in("media_id", media.map(m => m.id));
-      if (insightError) throw insightError;
+        const media = mediaData ?? [];
+        if (media.length === 0) return { impressions: 0, reach: 0, engagement: 0, byDate: [] as DayData[] };
 
-      const insMap = new Map((insightData ?? []).map((i: InsightRow) => [i.media_id, i]));
-      const byDate: Record<string, DayData> = {};
-      let totalImpressions = 0, totalReach = 0, totalEngagement = 0;
+        const { data: insightData, error: insightError } = await supabase
+          .from("ig_media_insights")
+          .select("media_id,impressions,reach,likes,comments,shares,saved")
+          .in("media_id", media.map(m => m.id));
+        if (insightError) throw insightError;
 
-      for (const m of media) {
-        const date = m.timestamp.slice(0, 10);
-        const ins  = insMap.get(m.id);
-        const imp  = ins?.impressions ?? 0;
-        const rch  = ins?.reach       ?? 0;
-        const eng  = (ins?.likes ?? 0) + (ins?.comments ?? 0) + (ins?.shares ?? 0) + (ins?.saved ?? 0);
-        if (!byDate[date]) byDate[date] = { date, impressions: 0, reach: 0, engagement: 0 };
-        byDate[date].impressions += imp;
-        byDate[date].reach       += rch;
-        byDate[date].engagement  += eng;
-        totalImpressions += imp;
-        totalReach       += rch;
-        totalEngagement  += eng;
+        const insMap = new Map((insightData ?? []).map((i: InsightRow) => [i.media_id, i]));
+        const byDate: Record<string, DayData> = {};
+        let totalImpressions = 0, totalReach = 0, totalEngagement = 0;
+
+        for (const m of media) {
+          const date = m.timestamp.slice(0, 10);
+          const ins  = insMap.get(m.id);
+          const imp  = ins?.impressions ?? 0;
+          const rch  = ins?.reach       ?? 0;
+          const eng  = (ins?.likes ?? 0) + (ins?.comments ?? 0) + (ins?.shares ?? 0) + (ins?.saved ?? 0);
+          if (!byDate[date]) byDate[date] = { date, impressions: 0, reach: 0, engagement: 0 };
+          byDate[date].impressions += imp;
+          byDate[date].reach       += rch;
+          byDate[date].engagement  += eng;
+          totalImpressions += imp;
+          totalReach       += rch;
+          totalEngagement  += eng;
+        }
+
+        return {
+          impressions: totalImpressions,
+          reach:       totalReach,
+          engagement:  totalEngagement,
+          byDate:      Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date)),
+        };
       }
 
+      const growth = (curr: number, prev: number): number | null => {
+        if (prev === 0) return curr > 0 ? null : null;
+        return Math.round(((curr - prev) / prev) * 100);
+      };
+
+      const [curr, prev] = await Promise.all([
+        fetchPeriod(dateStart, dateStop),
+        fetchPeriod(prevStartStr, prevStopStr),
+      ]);
+
       return {
-        impressions: totalImpressions,
-        reach:       totalReach,
-        engagement:  totalEngagement,
-        byDate:      Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date)),
+        impressions:     curr.impressions,
+        reach:           curr.reach,
+        engagement:      curr.engagement,
+        prevImpressions: prev.impressions,
+        prevReach:       prev.reach,
+        prevEngagement:  prev.engagement,
+        impressionsGrowth: growth(curr.impressions, prev.impressions),
+        reachGrowth:       growth(curr.reach,       prev.reach),
+        engagementGrowth:  growth(curr.engagement,  prev.engagement),
+        byDate:          curr.byDate,
       };
     },
     { refreshInterval: REVALIDATE },

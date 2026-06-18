@@ -28,6 +28,17 @@ const fmtPeriod = (start: string, stop: string) => {
   return `${s} – ${e}`;
 };
 
+function GrowthBadge({ pct }: { pct: number | null | undefined }) {
+  if (pct == null) return <span className="ig-growth-neutral">—</span>;
+  if (pct === 0)   return <span className="ig-growth-neutral">0%</span>;
+  const up = pct > 0;
+  return (
+    <span className={up ? "ig-growth-up" : "ig-growth-down"}>
+      {up ? "▲" : "▼"} {Math.abs(pct)}%
+    </span>
+  );
+}
+
 type ContentType = "semua" | "postingan" | "cerita";
 
 const CONTENT_TABS: { key: ContentType; label: string }[] = [
@@ -186,16 +197,19 @@ export function InstagramTab() {
               <div className="ig-metric">
                 <span className="ig-metric-label">Tayangan</span>
                 <span className="ig-metric-value">{num(overview?.impressions ?? 0)}</span>
+                <GrowthBadge pct={overview?.impressionsGrowth} />
               </div>
               <div className="ig-metric-divider" />
               <div className="ig-metric">
                 <span className="ig-metric-label">Jangkauan</span>
                 <span className="ig-metric-value">{num(overview?.reach ?? 0)}</span>
+                <GrowthBadge pct={overview?.reachGrowth} />
               </div>
               <div className="ig-metric-divider" />
               <div className="ig-metric">
                 <span className="ig-metric-label">Interaksi konten</span>
                 <span className="ig-metric-value">{num(overview?.engagement ?? 0)}</span>
+                <GrowthBadge pct={overview?.engagementGrowth} />
               </div>
             </>
           )}
