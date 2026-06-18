@@ -6,8 +6,7 @@ import { EngagementChart }    from "@/components/EngagementChart";
 import { AgeChart }           from "@/components/AgeChart";
 import { DemographicChart }   from "@/components/DemographicChart";
 import { RegionChart }        from "@/components/RegionChart";
-import { GenderChart }        from "@/components/GenderChart";
-import { AudienceTable }      from "@/components/AudienceTable";
+import { PlatformMediaChart } from "@/components/PlatformMediaChart";
 import { SyncStatus }         from "@/components/SyncStatus";
 import { InstagramTab }       from "@/components/InstagramTab";
 import { DatabaseTab }        from "@/components/DatabaseTab";
@@ -24,32 +23,32 @@ const num = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}jt` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}rb` : String(n);
 
 const OBJECTIVE_LABELS: Record<string, string> = {
-  OUTCOME_AWARENESS:     "Awareness",
-  OUTCOME_TRAFFIC:       "Traffic",
-  OUTCOME_ENGAGEMENT:    "Engagement",
-  OUTCOME_LEADS:         "Leads",
-  OUTCOME_SALES:         "Sales",
-  OUTCOME_APP_PROMOTION: "App Promotion",
-  LINK_CLICKS:           "Link Clicks",
-  PAGE_LIKES:            "Page Likes",
-  POST_ENGAGEMENT:       "Post Engagement",
-  REACH:                 "Reach",
-  BRAND_AWARENESS:       "Brand Awareness",
-  VIDEO_VIEWS:           "Video Views",
-  LEAD_GENERATION:       "Lead Generation",
-  CONVERSIONS:           "Conversions",
-  MESSAGES:              "Messages",
+  OUTCOME_AWARENESS:     "Kesadaran",
+  OUTCOME_TRAFFIC:       "Lalu Lintas",
+  OUTCOME_ENGAGEMENT:    "Interaksi",
+  OUTCOME_LEADS:         "Prospek",
+  OUTCOME_SALES:         "Penjualan",
+  OUTCOME_APP_PROMOTION: "Promosi Aplikasi",
+  LINK_CLICKS:           "Klik Tautan",
+  PAGE_LIKES:            "Suka Halaman",
+  POST_ENGAGEMENT:       "Interaksi Postingan",
+  REACH:                 "Jangkauan",
+  BRAND_AWARENESS:       "Kesadaran Merek",
+  VIDEO_VIEWS:           "Penayangan Video",
+  LEAD_GENERATION:       "Generasi Prospek",
+  CONVERSIONS:           "Konversi",
+  MESSAGES:              "Pesan",
 };
 
 const KPI_DESCRIPTIONS: Record<string, string> = {
-  "Total Spend":   "Total anggaran iklan yang sudah digunakan dalam periode yang dipilih. Ini adalah jumlah uang yang benar-benar terpakai dari semua campaign yang aktif.",
-  "Cost per Lead": "Rata-rata biaya yang dikeluarkan untuk mendapatkan satu lead. Dihitung dari Total Spend dibagi jumlah Leads. Semakin kecil nilainya, semakin efisien.",
+  "Total Biaya":   "Total anggaran iklan yang sudah digunakan dalam periode yang dipilih.",
+  "Percakapan":    "Jumlah percakapan pesan yang dimulai oleh pengguna melalui iklan (Messaging Conversations Started).",
   "Impresi":       "Jumlah total berapa kali iklan ditampilkan ke pengguna. Satu orang bisa melihat iklan yang sama lebih dari sekali.",
-  "Reach":         "Jumlah orang unik yang melihat iklan minimal satu kali dalam periode yang dipilih.",
-  "Klik":          "Jumlah total klik pada iklan. CTR adalah persentase orang yang melihat iklan lalu mengkliknya.",
-  "CPC":           "Cost Per Click — rata-rata biaya setiap kali ada orang yang mengklik iklan.",
-  "Pembelian":     "Jumlah transaksi pembelian yang terlacak melalui Meta Pixel di website.",
-  "Leads":         "Jumlah prospek yang berhasil didapatkan dari iklan, berupa pengisian formulir atau tindakan konversi lain.",
+  "Jangkauan":     "Jumlah orang unik yang melihat iklan minimal satu kali dalam periode yang dipilih.",
+  "Klik Tautan":   "Jumlah klik pada tautan (link) di dalam iklan yang mengarah ke tujuan yang ditentukan.",
+  "CPC (Semua)":   "Cost Per Click (Semua) — rata-rata biaya per klik dari semua jenis klik, bukan hanya klik tautan.",
+  "CTR (Semua)":   "Click-Through Rate (Semua) — persentase tayangan yang menghasilkan klik dari semua jenis klik.",
+  "CPM":           "Cost Per Mille — biaya per 1.000 tayangan iklan.",
 };
 
 function MultiSelectFilter({
@@ -72,7 +71,12 @@ function MultiSelectFilter({
   const toggle = (val: string) =>
     onChange(selected.includes(val) ? selected.filter((x) => x !== val) : [...selected, val]);
   const allSelected = selected.length === 0 || selected.length === options.length;
-  const btnLabel = allSelected ? `Semua ${label}` : `${selected.length} ${label} dipilih`;
+  const fmt = (v: string) => (formatLabel ? formatLabel(v) : v);
+  const btnLabel = allSelected
+    ? `Semua ${label}`
+    : selected.length <= 2
+      ? selected.map(fmt).join(", ")
+      : `${selected.length} ${label} dipilih`;
 
   return (
     <div className="cf-wrap" ref={ref}>
@@ -150,7 +154,6 @@ export default function DashboardPage() {
   };
 
   const { totals, isLoading } = useKpiTotals(dateStart, dateStop, effectiveCampaignIds, effectiveAdsetIds, effectiveAdIds);
-  const costPerLead = totals && totals.leads > 0 ? totals.spend / totals.leads : 0;
 
   return (
     <div className="dashboard">
@@ -222,14 +225,14 @@ export default function DashboardPage() {
           </div>
 
           <section className="kpi-grid">
-            <KpiCard label="Total Spend"   value={totals ? idr(totals.spend) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Total Spend"]} accent="magenta" />
-            <KpiCard label="Cost per Lead" value={totals ? (costPerLead > 0 ? idr(costPerLead) : "—") : "—"} sub={totals && totals.leads > 0 ? `dari ${totals.leads} leads` : "belum ada leads"} loading={isLoading} description={KPI_DESCRIPTIONS["Cost per Lead"]} />
+            <KpiCard label="Total Biaya"   value={totals ? idr(totals.spend) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Total Biaya"]} accent="magenta" />
+            <KpiCard label="Percakapan"    value={totals ? num(totals.messaging_conversations) : "—"} sub="pesan dimulai" loading={isLoading} description={KPI_DESCRIPTIONS["Percakapan"]} />
             <KpiCard label="Impresi"       value={totals ? num(totals.impressions) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Impresi"]} />
-            <KpiCard label="Reach"         value={totals ? num(totals.reach) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Reach"]} accent="info" />
-            <KpiCard label="Klik"          value={totals ? num(totals.clicks) : "—"} sub={totals ? `CTR ${totals.ctr.toFixed(2)}%` : undefined} loading={isLoading} description={KPI_DESCRIPTIONS["Klik"]} />
-            <KpiCard label="CPC"           value={totals ? idr(totals.cpc) : "—"} sub="cost per click" loading={isLoading} description={KPI_DESCRIPTIONS["CPC"]} />
-            <KpiCard label="Pembelian"     value={totals ? num(totals.purchases) : "—"} sub={totals ? `Nilai ${idr(totals.purchase_value)}` : undefined} loading={isLoading} description={KPI_DESCRIPTIONS["Pembelian"]} />
-            <KpiCard label="Leads"         value={totals ? num(totals.leads) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Leads"]} accent="success" />
+            <KpiCard label="Jangkauan"     value={totals ? num(totals.reach) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Jangkauan"]} accent="info" />
+            <KpiCard label="Klik Tautan"   value={totals ? num(totals.link_clicks) : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["Klik Tautan"]} />
+            <KpiCard label="CPC (Semua)"   value={totals ? idr(totals.cpc_all) : "—"} sub="per klik" loading={isLoading} description={KPI_DESCRIPTIONS["CPC (Semua)"]} />
+            <KpiCard label="CTR (Semua)"   value={totals ? `${totals.ctr_all.toFixed(2)}%` : "—"} loading={isLoading} description={KPI_DESCRIPTIONS["CTR (Semua)"]} />
+            <KpiCard label="CPM"           value={totals ? idr(totals.cpm) : "—"} sub="per 1.000 tayang" loading={isLoading} description={KPI_DESCRIPTIONS["CPM"]} />
           </section>
 
           <section className="charts-grid">
@@ -237,13 +240,10 @@ export default function DashboardPage() {
             <AgeChart         dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
             <DemographicChart dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
             <RegionChart      dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
-            <GenderChart      dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
+            <PlatformMediaChart dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
             <EngagementChart  dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} adsetIds={effectiveAdsetIds} adIds={effectiveAdIds} />
           </section>
 
-          <section className="audience-section">
-            <AudienceTable dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} />
-{/*  */}          </section>
         </>
       )}
 

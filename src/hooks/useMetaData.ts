@@ -143,50 +143,112 @@ export function useCampaignSummary(
 }
 
 export function useKpiTotals(dateStart: string, dateStop: string, campaignIds: string[] = [], adsetIds: string[] = [], adIds: string[] = []) {
-  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop, campaignIds, adsetIds, adIds);
-  const totals = data
-    ? data.reduce(
+  const sc = [...campaignIds].sort();
+  const sa = [...adsetIds].sort();
+  const si = [...adIds].sort();
+
+  type KpiRow = {
+    impressions: number | null; reach: number | null; clicks: number | null;
+    link_clicks: number | null; spend: number | null;
+    messaging_conversations: number | null; leads: number | null;
+    purchases: number | null; purchase_value: number | null;
+  };
+  type KpiSums = {
+    impressions: number; reach: number; clicks: number; link_clicks: number;
+    spend: number; messaging_conversations: number; leads: number;
+    purchases: number; purchase_value: number;
+  };
+
+  const { data, error, isLoading } = useSWR<KpiRow[]>(
+    ["kpi_totals", dateStart, dateStop, sc.join(","), sa.join(","), si.join(",")],
+    async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = supabase
+        .from("ad_performance")
+        .select("impressions,reach,clicks,link_clicks,spend,messaging_conversations,leads,purchases,purchase_value")
+        .gte("date_start", dateStart)
+        .lte("date_start", dateStop);
+      if (si.length > 0) q = q.in("ad_id", si);
+      else if (sa.length > 0) q = q.in("adset_id", sa);
+      if (sc.length > 0) q = q.in("campaign_id", sc);
+      const { data: rows, error: err } = await q as { data: KpiRow[] | null; error: { message: string } | null };
+      if (err) throw err;
+      return rows ?? [];
+    },
+    { refreshInterval: REVALIDATE },
+  );
+
+  const sums = data
+    ? data.reduce<KpiSums>(
         (acc, row) => ({
-          impressions:    acc.impressions    + (row.impressions   ?? 0),
-          reach:          acc.reach          + (row.reach         ?? 0),
-          clicks:         acc.clicks         + (row.clicks        ?? 0),
-          spend:          acc.spend          + (row.spend         ?? 0),
-          purchases:      acc.purchases      + (row.results       ?? 0),
-          purchase_value: acc.purchase_value + (row.result_value  ?? 0),
-          leads:          acc.leads          + (row.leads         ?? 0),
+          impressions:             acc.impressions             + (row.impressions             ?? 0),
+          reach:                   acc.reach                   + (row.reach                   ?? 0),
+          clicks:                  acc.clicks                  + (row.clicks                  ?? 0),
+          link_clicks:             acc.link_clicks             + (row.link_clicks             ?? 0),
+          spend:                   acc.spend                   + (row.spend                   ?? 0),
+          messaging_conversations: acc.messaging_conversations + (row.messaging_conversations ?? 0),
+          leads:                   acc.leads                   + (row.leads                   ?? 0),
+          purchases:               acc.purchases               + (row.purchases               ?? 0),
+          purchase_value:          acc.purchase_value          + (row.purchase_value          ?? 0),
         }),
-        { impressions: 0, reach: 0, clicks: 0, spend: 0, purchases: 0, purchase_value: 0, leads: 0 },
+        { impressions: 0, reach: 0, clicks: 0, link_clicks: 0, spend: 0, messaging_conversations: 0, leads: 0, purchases: 0, purchase_value: 0 },
       )
     : null;
-  const derived = totals ? {
-    ...totals,
-    ctr:  totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0,
-    cpc:  totals.clicks > 0 ? totals.spend / totals.clicks : 0,
-    roas: totals.spend > 0  ? totals.purchase_value / totals.spend : 0,
+
+  const totals = sums ? {
+    ...sums,
+    ctr_all: sums.impressions > 0 ? (sums.clicks / sums.impressions) * 100 : 0,
+    cpc_all: sums.clicks      > 0 ? sums.spend / sums.clicks : 0,
+    cpm:     sums.impressions > 0 ? (sums.spend / sums.impressions) * 1000 : 0,
   } : null;
-  return { totals: derived, error, isLoading };
+
+  return { totals, error, isLoading };
 }
 
 export function useSpendChart(dateStart: string, dateStop: string, campaignIds: string[] = [], adsetIds: string[] = [], adIds: string[] = []) {
-  const { data, error, isLoading } = useCampaignSummary(dateStart, dateStop, campaignIds, adsetIds, adIds);
+  const sc = [...campaignIds].sort();
+  const sa = [...adsetIds].sort();
+  const si = [...adIds].sort();
+
+  type SpendRow = { date_start: string; spend: number | null; messaging_conversations: number | null; };
+
+  const { data, error, isLoading } = useSWR<SpendRow[]>(
+    ["spend_chart", dateStart, dateStop, sc.join(","), sa.join(","), si.join(",")],
+    async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = supabase
+        .from("ad_performance")
+        .select("date_start,spend,messaging_conversations")
+        .gte("date_start", dateStart)
+        .lte("date_start", dateStop)
+        .order("date_start", { ascending: true });
+      if (si.length > 0) q = q.in("ad_id", si);
+      else if (sa.length > 0) q = q.in("adset_id", sa);
+      if (sc.length > 0) q = q.in("campaign_id", sc);
+      const { data: rows, error: err } = await q as { data: SpendRow[] | null; error: { message: string } | null };
+      if (err) throw err;
+      return rows ?? [];
+    },
+    { refreshInterval: REVALIDATE },
+  );
+
+  // ROAS = spend / messaging_conversations (biaya per percakapan dimulai)
   const chartData = data
     ? Object.values(
-        data.reduce<Record<string, { date: string; spend: number; roas: number; impressions: number }>>(
+        data.reduce<Record<string, { date: string; spend: number; conversations: number }>>(
           (acc, row) => {
             const d = row.date_start;
-            if (!acc[d]) acc[d] = { date: d, spend: 0, roas: 0, impressions: 0 };
-            const rowSpend = row.spend ?? 0;
-            const prevSpend = acc[d].spend;
-            acc[d].spend       += rowSpend;
-            acc[d].impressions += row.impressions ?? 0;
-            const rowRoas = rowSpend > 0 ? (row.result_value ?? 0) / rowSpend : 0;
-            const newSpend = acc[d].spend;
-            if (newSpend > 0) acc[d].roas = ((acc[d].roas * prevSpend) + (rowRoas * rowSpend)) / newSpend;
+            if (!acc[d]) acc[d] = { date: d, spend: 0, conversations: 0 };
+            acc[d].spend         += row.spend                   ?? 0;
+            acc[d].conversations += row.messaging_conversations ?? 0;
             return acc;
           }, {},
         ),
-      ).sort((a, b) => a.date.localeCompare(b.date))
+      )
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((d) => ({ ...d, roas: d.conversations > 0 ? d.spend / d.conversations : 0 }))
     : [];
+
   return { chartData, error, isLoading };
 }
 

@@ -335,14 +335,16 @@ body {
 /* ── KPI CARDS ── */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 12px;
 }
+@media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 700px)  { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .kpi-card {
   background: var(--surface);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 14px 16px;
   border: 1px solid var(--gray-200);
   position: relative;
   overflow: hidden;
@@ -386,12 +388,15 @@ body {
 }
 
 .kpi-value {
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--gray-900);
   line-height: 1;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   letter-spacing: -0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kpi-bottom { display: flex; align-items: center; gap: 6px; }

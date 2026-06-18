@@ -30,7 +30,8 @@ export interface AudienceInsight {
   id: string; campaign_id: string; account_id: string;
   date_start: string; date_stop: string; breakdown_type: string;
   age: string | null; gender: string | null; region: string | null;
-  device_platform: string | null; placement: string | null;
+  device_platform: string | null; impression_device: string | null;
+  placement: string | null; publisher_platform: string | null;
   impressions: number; reach: number; clicks: number; spend: number; ctr: number | null; synced_at: string;
 }
 export interface SyncLog {
