@@ -252,10 +252,12 @@ Deno.serve(async (req: Request) => {
       const chunkUntil = nowSec - i * CHUNK_DAYS * 86400;
       const chunkSince = chunkUntil - CHUNK_DAYS * 86400;
 
+      // follower_count hanya tersedia 30 hari terakhir — chunk 0 saja
+      const metric = i === 0 ? "reach,follower_count" : "reach";
       const data = await apiFetchPaginated<{
         name: string;
         values: Array<{ value: number; end_time: string }>;
-      }>(`${igAccountId}/insights?metric=reach,follower_count&period=day&since=${chunkSince}&until=${chunkUntil}`);
+      }>(`${igAccountId}/insights?metric=${metric}&period=day&since=${chunkSince}&until=${chunkUntil}`);
       console.log(`Account insights chunk ${i} count for ${igAccountId}: ${data.length}`);
 
       for (const metric of data) {
