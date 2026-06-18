@@ -51,8 +51,8 @@ async function upsertRows(rows) {
 
 async function backfill() {
   // Mulai dari Jan 2025, sampai hari ini, chunk 28 hari
-  const START_DATE = new Date("2025-01-01T00:00:00Z");
-  const END_DATE   = new Date();
+  const START_DATE = new Date("2024-06-19T00:00:00Z");
+  const END_DATE   = new Date("2025-01-01T00:00:00Z"); // 2025-01-01 ke atas sudah ada
   const CHUNK_DAYS = 28;
 
   let cursor = new Date(START_DATE);
