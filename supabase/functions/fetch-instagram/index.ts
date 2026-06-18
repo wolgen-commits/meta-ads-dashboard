@@ -103,6 +103,8 @@ async function syncMedia(
         { onConflict: "id", ignoreDuplicates: false },
       );
 
+      // ignoreDuplicates: true — jangan reset reach/impressions post lama yang sudah diisi
+      // Row baru (post pertama kali) tetap di-INSERT dengan nilai awal 0
       await supabase.from("ig_media_insights").upsert(
         media.map((m) => ({
           media_id: m.id, ig_account_id: accountId,
@@ -112,7 +114,7 @@ async function syncMedia(
           taps_forward: 0, taps_back: 0, profile_visits: 0, follows: 0,
           synced_at: new Date().toISOString(),
         })),
-        { onConflict: "media_id", ignoreDuplicates: false },
+        { onConflict: "media_id", ignoreDuplicates: true },
       );
 
       synced.push(...media.map((m) => ({ id: m.id, media_product_type: m.media_product_type ?? "FEED" })));
