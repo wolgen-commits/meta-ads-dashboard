@@ -614,9 +614,9 @@ export function useIgContentOverview(
     ["ig_content_overview", accountId, dateStart, dateStop, contentType],
     async () => {
       const empty = {
-        mediaCount: 0, reach: 0, engagement: 0,
-        prevMediaCount: 0, prevReach: 0, prevEngagement: 0,
-        mediaCountGrowth: null as number | null,
+        views: 0, reach: 0, engagement: 0,
+        prevViews: 0, prevReach: 0, prevEngagement: 0,
+        viewsGrowth:      null as number | null,
         reachGrowth:      null as number | null,
         engagementGrowth: null as number | null,
         noInsights: false,
@@ -649,35 +649,38 @@ export function useIgContentOverview(
         if (mediaError) throw mediaError;
 
         const media = mediaData ?? [];
-        if (media.length === 0) return { mediaCount: 0, reach: 0, engagement: 0, noInsights: false, byDate: [] as DayData[] };
+        if (media.length === 0) return { views: 0, reach: 0, engagement: 0, noInsights: false, byDate: [] as DayData[] };
 
         const { data: insightData, error: insightError } = await supabase
           .from("ig_media_insights")
-          .select("media_id,reach,likes,comments,shares,saved")
+          .select("media_id,impressions,reach,likes,comments,shares,saved")
           .in("media_id", media.map(m => m.id));
         if (insightError) throw insightError;
 
         const insMap = new Map((insightData ?? []).map((i: InsightRow) => [i.media_id, i]));
         const byDate: Record<string, DayData> = {};
-        let totalReach = 0, totalEngagement = 0;
+        let totalViews = 0, totalReach = 0, totalEngagement = 0;
 
         for (const m of media) {
           const date = m.timestamp.slice(0, 10);
           const ins  = insMap.get(m.id);
-          const rch  = ins?.reach ?? 0;
+          const vws  = ins?.impressions ?? 0; // kolom impressions sekarang menyimpan views
+          const rch  = ins?.reach       ?? 0;
           const eng  = (ins?.likes ?? 0) + (ins?.comments ?? 0) + (ins?.shares ?? 0) + (ins?.saved ?? 0);
           if (!byDate[date]) byDate[date] = { date, impressions: 0, reach: 0, engagement: 0 };
-          byDate[date].reach      += rch;
-          byDate[date].engagement += eng;
-          totalReach       += rch;
-          totalEngagement  += eng;
+          byDate[date].impressions += vws;
+          byDate[date].reach       += rch;
+          byDate[date].engagement  += eng;
+          totalViews      += vws;
+          totalReach      += rch;
+          totalEngagement += eng;
         }
 
-        // noInsights: semua media ada tapi tak satu pun punya insight (kasus cerita kadaluarsa)
+        // noInsights: media ada tapi tak satu pun punya insight (kasus cerita kadaluarsa)
         const noInsights = insightData !== null && insightData.length === 0 && media.length > 0;
 
         return {
-          mediaCount: media.length,
+          views:      totalViews,
           reach:      totalReach,
           engagement: totalEngagement,
           noInsights,
@@ -696,13 +699,13 @@ export function useIgContentOverview(
       ]);
 
       return {
-        mediaCount:       curr.mediaCount,
+        views:            curr.views,
         reach:            curr.reach,
         engagement:       curr.engagement,
-        prevMediaCount:   prev.mediaCount,
+        prevViews:        prev.views,
         prevReach:        prev.reach,
         prevEngagement:   prev.engagement,
-        mediaCountGrowth: growth(curr.mediaCount, prev.mediaCount),
+        viewsGrowth:      growth(curr.views,      prev.views),
         reachGrowth:      growth(curr.reach,      prev.reach),
         engagementGrowth: growth(curr.engagement, prev.engagement),
         noInsights:       curr.noInsights,

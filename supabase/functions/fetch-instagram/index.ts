@@ -158,9 +158,10 @@ async function syncMediaInsights(
     if (mediaProductType === "STORY") {
       metrics = "exits,reach,replies,taps_forward,taps_back";
     } else if (mediaProductType === "REELS") {
-      metrics = "comments,likes,reach,saved,shares,total_interactions";
+      metrics = "comments,likes,reach,saved,shares,views";
     } else {
-      metrics = "comments,likes,reach,saved,shares";
+      // FEED, IMAGE, VIDEO
+      metrics = "comments,likes,reach,saved,shares,views";
     }
 
     const data = await apiFetch<{
@@ -181,7 +182,7 @@ async function syncMediaInsights(
       media_id: mediaId, ig_account_id: accountId,
       likes: getValue("likes"), comments: getValue("comments"),
       shares: getValue("shares"), saved: getValue("saved"),
-      reach: getValue("reach"), impressions: 0, video_views: 0, plays: 0,
+      reach: getValue("reach"), impressions: getValue("views"), video_views: 0, plays: 0,
       exits: getValue("exits"), replies: getValue("replies"),
       taps_forward: getValue("taps_forward"), taps_back: getValue("taps_back"),
       profile_visits: 0, follows: 0,

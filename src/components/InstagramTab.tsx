@@ -195,9 +195,12 @@ export function InstagramTab() {
           ) : (
             <>
               <div className="ig-metric">
-                <span className="ig-metric-label">Jumlah konten</span>
-                <span className="ig-metric-value">{num(overview?.mediaCount ?? 0)}</span>
-                <GrowthBadge pct={overview?.mediaCountGrowth} />
+                <span className="ig-metric-label">Tayangan</span>
+                {overview?.noInsights
+                  ? <span className="ig-metric-value ig-metric-na">—</span>
+                  : <span className="ig-metric-value">{num(overview?.views ?? 0)}</span>
+                }
+                {!overview?.noInsights && <GrowthBadge pct={overview?.viewsGrowth} />}
               </div>
               <div className="ig-metric-divider" />
               <div className="ig-metric">
