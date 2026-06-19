@@ -1024,6 +1024,21 @@ body {
 @media (max-width: 1100px) { .ig-analytics-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 700px)  { .ig-analytics-grid { grid-template-columns: 1fr; } }
 
+/* ── INSTAGRAM AUDIENCE SECTION ── */
+.ig-audience-section { display: flex; flex-direction: column; }
+.ig-audience-section-title {
+  font-size: 13px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--gray-500);
+  margin: 0 0 4px 0; font-family: DM Sans, sans-serif;
+}
+.ig-audience-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+@media (max-width: 900px) { .ig-audience-grid { grid-template-columns: 1fr; } }
+
 /* ── DATABASE TAB ── */
 .db-tab { display: flex; flex-direction: column; gap: 16px; }
 

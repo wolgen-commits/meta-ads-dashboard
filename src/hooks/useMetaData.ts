@@ -821,6 +821,8 @@ export type IgInsightTrend = {
   date: string;
   followers_count: number;
   reach: number;
+  reach_followers: number;
+  reach_non_followers: number;
   likes_count: number;
   comments_count: number;
   shares_count: number;
@@ -834,7 +836,7 @@ export function useIgAccountInsightsTrend(accountId: string, dateStart: string, 
       if (!accountId) return [];
       const { data, error } = await supabase
         .from("ig_account_insights")
-        .select("date,followers_count,reach,likes_count,comments_count,shares_count,saves_count")
+        .select("date,followers_count,reach,reach_followers,reach_non_followers,likes_count,comments_count,shares_count,saves_count")
         .eq("ig_account_id", accountId)
         .gte("date", dateStart)
         .lte("date", dateStop)
@@ -844,6 +846,70 @@ export function useIgAccountInsightsTrend(accountId: string, dateStart: string, 
     },
     { refreshInterval: REVALIDATE },
   );
+}
+
+export type IgAudienceBreakdown = {
+  breakdown_type: string;
+  breakdown_value: string;
+  follower_count: number;
+};
+
+const AGE_ORDER_AUD = ["13-17","18-24","25-34","35-44","45-54","55-64","65+"];
+
+export function useIgAudienceDemographics(accountId: string | null) {
+  const { data, isLoading } = useSWR<IgAudienceBreakdown[]>(
+    accountId ? ["ig_audience", accountId] : null,
+    async () => {
+      const { data: rows, error } = await supabase
+        .from("ig_audience_breakdown")
+        .select("breakdown_type,breakdown_value,follower_count")
+        .eq("ig_account_id", accountId as string)
+        .order("follower_count", { ascending: false });
+      if (error) throw error;
+      return (rows ?? []) as IgAudienceBreakdown[];
+    },
+    { refreshInterval: REVALIDATE },
+  );
+  const all = data ?? [];
+  return {
+    isLoading,
+    byAge:     all.filter(r => r.breakdown_type === "age")
+                  .sort((a, b) => AGE_ORDER_AUD.indexOf(a.breakdown_value) - AGE_ORDER_AUD.indexOf(b.breakdown_value)),
+    byGender:  all.filter(r => r.breakdown_type === "gender"),
+    byCountry: all.filter(r => r.breakdown_type === "country").slice(0, 10),
+    byCity:    all.filter(r => r.breakdown_type === "city").slice(0, 10),
+    hasData:   all.length > 0,
+  };
+}
+
+export type IgOnlineFollowerHour = { hour: number; avg_followers: number };
+
+export function useIgOnlineFollowers(accountId: string | null) {
+  const { data, isLoading } = useSWR<IgOnlineFollowerHour[]>(
+    accountId ? ["ig_online_followers", accountId] : null,
+    async () => {
+      const { data: rows, error } = await supabase
+        .from("ig_online_followers")
+        .select("hour,follower_count")
+        .eq("ig_account_id", accountId as string)
+        .order("date", { ascending: false })
+        .limit(7 * 24);
+      if (error) throw error;
+      const byHour: Record<number, number[]> = {};
+      for (const r of (rows ?? []) as { hour: number; follower_count: number }[]) {
+        if (!byHour[r.hour]) byHour[r.hour] = [];
+        byHour[r.hour].push(r.follower_count);
+      }
+      return Array.from({ length: 24 }, (_, h) => ({
+        hour: h,
+        avg_followers: byHour[h]?.length
+          ? Math.round(byHour[h].reduce((s, v) => s + v, 0) / byHour[h].length)
+          : 0,
+      }));
+    },
+    { refreshInterval: REVALIDATE },
+  );
+  return { data: data ?? [], isLoading };
 }
 
 export function useIgTopMedia(accountId: string, _dateStart: string, _dateStop: string, limit = 10) {

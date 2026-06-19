@@ -256,7 +256,9 @@ Deno.serve(async (req: Request) => {
       const chunkSince = chunkUntil - CHUNK_DAYS * 86400;
 
       // follower_count hanya tersedia 30 hari terakhir — chunk 0 saja
-      const metric = i === 0 ? "reach,follower_count" : "reach";
+      const metric = i === 0
+        ? "reach,follower_count,reach_logged_in_followers,reach_logged_in_non_followers"
+        : "reach";
       const data = await apiFetchPaginated<{
         name: string;
         values: Array<{ value: number; end_time: string }>;
@@ -277,15 +279,17 @@ Deno.serve(async (req: Request) => {
     const rows = Object.entries(byDate).map(([date, vals]) => ({
       ig_account_id:   igAccountId,
       date,
-      impressions:     0,
-      reach:           vals.reach           ?? 0,
-      profile_views:   0,
-      website_clicks:  0,
-      followers_count: vals.follower_count  ?? 0,
-      likes_count:     0,
-      comments_count:  0,
-      shares_count:    0,
-      saves_count:     0,
+      impressions:          0,
+      reach:                vals.reach                          ?? 0,
+      profile_views:        0,
+      website_clicks:       0,
+      followers_count:      vals.follower_count                 ?? 0,
+      reach_followers:      vals.reach_logged_in_followers      ?? 0,
+      reach_non_followers:  vals.reach_logged_in_non_followers  ?? 0,
+      likes_count:          0,
+      comments_count:       0,
+      shares_count:         0,
+      saves_count:          0,
     }));
 
     if (rows.length === 0) {
@@ -301,6 +305,71 @@ Deno.serve(async (req: Request) => {
 
   await syncAccountInsights("17841457712254566"); // @magentaindopack
 
+  // ── Sync audience demographics (lifetime) ────────────────────────────────
+  async function syncAudienceDemographics(igAccountId: string): Promise<void> {
+    const dimensions = [
+      { metric: "audience_age",     type: "age" },
+      { metric: "audience_gender",  type: "gender" },
+      { metric: "audience_country", type: "country" },
+      { metric: "audience_city",    type: "city" },
+    ];
+    for (const { metric, type } of dimensions) {
+      const data = await apiFetch<{ data: Array<{ values?: Array<{ value: Record<string, number> }> }> }>(
+        `${igAccountId}/insights?metric=${metric}&period=lifetime`
+      );
+      const rawValue = data?.data?.[0]?.values?.[0]?.value ?? {};
+      const rows = Object.entries(rawValue).map(([k, v]) => ({
+        ig_account_id:   igAccountId,
+        breakdown_type:  type,
+        breakdown_value: k,
+        follower_count:  Number(v),
+        synced_at:       new Date().toISOString(),
+      }));
+      if (rows.length > 0) {
+        const { error } = await supabase
+          .from("ig_audience_breakdown")
+          .upsert(rows, { onConflict: "ig_account_id,breakdown_type,breakdown_value" });
+        if (error) console.error(`upsert ig_audience_breakdown (${type}):`, error.message);
+        else console.log(`Upserted ${rows.length} rows for audience_${type}`);
+      }
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }
+
+  // ── Sync online followers by hour ─────────────────────────────────────────
+  async function syncOnlineFollowers(igAccountId: string): Promise<void> {
+    const since = Math.floor(Date.now() / 1000) - 7 * 86400;
+    const data = await apiFetch<{ data: Array<{ values?: Array<{ value: Record<string, number>; end_time: string }> }> }>(
+      `${igAccountId}/insights?metric=online_followers&period=day&since=${since}`
+    );
+    const values = data?.data?.[0]?.values ?? [];
+    const rows: object[] = [];
+    for (const v of values) {
+      const date = v.end_time?.slice(0, 10);
+      if (!date || typeof v.value !== "object") continue;
+      for (const [hour, count] of Object.entries(v.value)) {
+        rows.push({
+          ig_account_id:  igAccountId,
+          date,
+          hour:           Number(hour),
+          follower_count: Number(count),
+          synced_at:      new Date().toISOString(),
+        });
+      }
+    }
+    if (rows.length > 0) {
+      const { error } = await supabase
+        .from("ig_online_followers")
+        .upsert(rows, { onConflict: "ig_account_id,date,hour" });
+      if (error) console.error("upsert ig_online_followers:", error.message);
+      else console.log(`Upserted ${rows.length} online_follower rows`);
+    } else {
+      console.log("No online_followers data returned");
+    }
+  }
+
+  await syncAudienceDemographics("17841457712254566");
+  await syncOnlineFollowers("17841457712254566");
 
   return new Response(
     JSON.stringify({ status: "success", total_records: totalRecords, accounts: results }),
