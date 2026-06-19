@@ -256,9 +256,7 @@ Deno.serve(async (req: Request) => {
       const chunkSince = chunkUntil - CHUNK_DAYS * 86400;
 
       // follower_count hanya tersedia 30 hari terakhir — chunk 0 saja
-      const metric = i === 0
-        ? "reach,follower_count,reach_logged_in_followers,reach_logged_in_non_followers"
-        : "reach";
+      const metric = i === 0 ? "reach,follower_count" : "reach";
       const data = await apiFetchPaginated<{
         name: string;
         values: Array<{ value: number; end_time: string }>;
@@ -279,17 +277,15 @@ Deno.serve(async (req: Request) => {
     const rows = Object.entries(byDate).map(([date, vals]) => ({
       ig_account_id:   igAccountId,
       date,
-      impressions:          0,
-      reach:                vals.reach                          ?? 0,
-      profile_views:        0,
-      website_clicks:       0,
-      followers_count:      vals.follower_count                 ?? 0,
-      reach_followers:      vals.reach_logged_in_followers      ?? 0,
-      reach_non_followers:  vals.reach_logged_in_non_followers  ?? 0,
-      likes_count:          0,
-      comments_count:       0,
-      shares_count:         0,
-      saves_count:          0,
+      impressions:     0,
+      reach:           vals.reach          ?? 0,
+      profile_views:   0,
+      website_clicks:  0,
+      followers_count: vals.follower_count ?? 0,
+      likes_count:     0,
+      comments_count:  0,
+      shares_count:    0,
+      saves_count:     0,
     }));
 
     if (rows.length === 0) {
@@ -306,55 +302,71 @@ Deno.serve(async (req: Request) => {
   await syncAccountInsights("17841457712254566"); // @magentaindopack
 
   // ── Sync audience demographics (lifetime) ────────────────────────────────
+  // Meta IG API v22.0: metric=follower_demographics&breakdown=age|gender|country|city
+  // Format respons: total_value.breakdowns[0].results
   async function syncAudienceDemographics(igAccountId: string): Promise<void> {
     const dimensions = [
-      { metric: "audience_age",     type: "age" },
-      { metric: "audience_gender",  type: "gender" },
-      { metric: "audience_country", type: "country" },
-      { metric: "audience_city",    type: "city" },
+      { breakdown: "age",     type: "age" },
+      { breakdown: "gender",  type: "gender" },
+      { breakdown: "country", type: "country" },
+      { breakdown: "city",    type: "city" },
     ];
-    for (const { metric, type } of dimensions) {
-      const data = await apiFetch<{ data: Array<{ values?: Array<{ value: Record<string, number> }> }> }>(
-        `${igAccountId}/insights?metric=${metric}&period=lifetime`
+    for (const { breakdown, type } of dimensions) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await apiFetch<any>(
+        `${igAccountId}/insights?metric=follower_demographics&breakdown=${breakdown}&period=lifetime&metric_type=total_value`
       );
-      const rawValue = data?.data?.[0]?.values?.[0]?.value ?? {};
-      const rows = Object.entries(rawValue).map(([k, v]) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results: Array<{ dimension_values: string[]; value: number }> =
+        data?.data?.[0]?.total_value?.breakdowns?.[0]?.results ?? [];
+
+      const rows = results.map(r => ({
         ig_account_id:   igAccountId,
         breakdown_type:  type,
-        breakdown_value: k,
-        follower_count:  Number(v),
+        breakdown_value: r.dimension_values?.[0] ?? "unknown",
+        follower_count:  r.value ?? 0,
         synced_at:       new Date().toISOString(),
-      }));
+      })).filter(r => r.follower_count > 0);
+
       if (rows.length > 0) {
         const { error } = await supabase
           .from("ig_audience_breakdown")
           .upsert(rows, { onConflict: "ig_account_id,breakdown_type,breakdown_value" });
         if (error) console.error(`upsert ig_audience_breakdown (${type}):`, error.message);
-        else console.log(`Upserted ${rows.length} rows for audience_${type}`);
+        else console.log(`Upserted ${rows.length} rows for follower_demographics (${type})`);
+      } else {
+        console.log(`No follower_demographics data for breakdown=${breakdown}`);
       }
       await new Promise((r) => setTimeout(r, 300));
     }
   }
 
   // ── Sync online followers by hour ─────────────────────────────────────────
+  // Meta IG v22.0: online_followers tidak mendukung period=day atau metric_type=total_value
+  // Coba tanpa metric_type, dengan period=lifetime
   async function syncOnlineFollowers(igAccountId: string): Promise<void> {
-    const since = Math.floor(Date.now() / 1000) - 7 * 86400;
-    const data = await apiFetch<{ data: Array<{ values?: Array<{ value: Record<string, number>; end_time: string }> }> }>(
-      `${igAccountId}/insights?metric=online_followers&period=day&since=${since}`
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await apiFetch<any>(
+      `${igAccountId}/insights?metric=online_followers&period=lifetime`
     );
-    const values = data?.data?.[0]?.values ?? [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const values: Array<{ value: Record<string, number> | number; end_time?: string }> =
+      data?.data?.[0]?.values ?? [];
+
     const rows: object[] = [];
+    const today = new Date().toISOString().slice(0, 10);
     for (const v of values) {
-      const date = v.end_time?.slice(0, 10);
-      if (!date || typeof v.value !== "object") continue;
-      for (const [hour, count] of Object.entries(v.value)) {
-        rows.push({
-          ig_account_id:  igAccountId,
-          date,
-          hour:           Number(hour),
-          follower_count: Number(count),
-          synced_at:      new Date().toISOString(),
-        });
+      const date = v.end_time?.slice(0, 10) ?? today;
+      if (typeof v.value === "object" && v.value !== null) {
+        for (const [hour, count] of Object.entries(v.value as Record<string, number>)) {
+          rows.push({
+            ig_account_id:  igAccountId,
+            date,
+            hour:           Number(hour),
+            follower_count: Number(count),
+            synced_at:      new Date().toISOString(),
+          });
+        }
       }
     }
     if (rows.length > 0) {
@@ -364,12 +376,66 @@ Deno.serve(async (req: Request) => {
       if (error) console.error("upsert ig_online_followers:", error.message);
       else console.log(`Upserted ${rows.length} online_follower rows`);
     } else {
-      console.log("No online_followers data returned");
+      console.log("online_followers not available or no data returned");
     }
+  }
+
+  // ── Sync reach breakdown: followers vs non-followers ─────────────────────
+  // Meta IG API v22.0: metric=reach&breakdown=follow_type&period=day
+  async function syncReachByFollowType(igAccountId: string): Promise<void> {
+    const CHUNK_DAYS = 28;
+    const NUM_CHUNKS = 3;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const byDate: Record<string, { followers: number; non_followers: number }> = {};
+
+    for (let i = 0; i < NUM_CHUNKS; i++) {
+      const chunkUntil = nowSec - i * CHUNK_DAYS * 86400;
+      const chunkSince = chunkUntil - CHUNK_DAYS * 86400;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await apiFetch<any>(
+        `${igAccountId}/insights?metric=reach&breakdown=follow_type&period=day&since=${chunkSince}&until=${chunkUntil}`
+      );
+      console.log(`reach by follow_type chunk ${i}:`, JSON.stringify(data)?.slice(0, 400));
+
+      // Format bisa berupa values[] (time-series) atau total_value (aggregate)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const values: Array<{ value: Record<string, number> | number; end_time: string }> =
+        data?.data?.[0]?.values ?? [];
+
+      for (const v of values) {
+        const date = v.end_time?.slice(0, 10);
+        if (!date) continue;
+        if (!byDate[date]) byDate[date] = { followers: 0, non_followers: 0 };
+        if (typeof v.value === "object" && v.value !== null) {
+          byDate[date].followers     += (v.value as Record<string, number>).FOLLOWER     ?? 0;
+          byDate[date].non_followers += (v.value as Record<string, number>).NON_FOLLOWER ?? 0;
+        }
+      }
+      await new Promise((r) => setTimeout(r, 300));
+    }
+
+    const updates = Object.entries(byDate)
+      .filter(([, v]) => v.followers > 0 || v.non_followers > 0);
+
+    if (updates.length === 0) {
+      console.log("No reach by follow_type data");
+      return;
+    }
+
+    for (const [date, vals] of updates) {
+      await supabase
+        .from("ig_account_insights")
+        .update({ reach_followers: vals.followers, reach_non_followers: vals.non_followers })
+        .eq("ig_account_id", igAccountId)
+        .eq("date", date);
+    }
+    console.log(`Updated reach_followers for ${updates.length} dates`);
   }
 
   await syncAudienceDemographics("17841457712254566");
   await syncOnlineFollowers("17841457712254566");
+  await syncReachByFollowType("17841457712254566");
 
   return new Response(
     JSON.stringify({ status: "success", total_records: totalRecords, accounts: results }),
