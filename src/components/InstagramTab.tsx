@@ -17,6 +17,18 @@ const num = (n: number) =>
 const fmtAxisDate = (d: unknown) =>
   new Date(String(d)).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 
+const COUNTRY_NAMES: Record<string, string> = {
+  ID: "Indonesia", IN: "India", US: "Amerika Serikat", MY: "Malaysia",
+  SG: "Singapura", PK: "Pakistan", BD: "Bangladesh", PH: "Filipina",
+  GB: "Inggris", AU: "Australia", CA: "Kanada", AE: "Uni Emirat Arab",
+  SA: "Arab Saudi", NG: "Nigeria", EG: "Mesir", TH: "Thailand",
+  VN: "Vietnam", JP: "Jepang", KR: "Korea Selatan", CN: "Tiongkok",
+  DE: "Jerman", FR: "Prancis", NL: "Belanda", IT: "Italia", ES: "Spanyol",
+  BR: "Brasil", MX: "Meksiko", ZA: "Afrika Selatan", TR: "Turki",
+  IR: "Iran", IQ: "Irak", KW: "Kuwait", QA: "Qatar", BH: "Bahrain",
+};
+const countryName = (code: string) => COUNTRY_NAMES[code.toUpperCase()] ?? code;
+
 const fmtCardDate = (ts: string) =>
   new Date(ts).toLocaleString("id-ID", {
     day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
@@ -164,6 +176,7 @@ export function InstagramTab() {
   const [activeAccount, setActiveAccount] = useState<string | null>(null);
   const [contentTab, setContentTab] = useState<ContentType>("semua");
   const [selectedMedia, setSelectedMedia] = useState<(IgMedia & Partial<IgMediaInsight>) | null>(null);
+  const [chartView, setChartView] = useState<"organik" | "follow_type">("organik");
 
   const { data: accounts, isLoading: loadingAccounts } = useIgAccounts();
   const currentId      = activeAccount ?? accounts?.[0]?.id ?? "";
@@ -251,7 +264,6 @@ export function InstagramTab() {
       <div className="ig-overview-card">
         <div className="ig-overview-header">
           <h3 className="ig-overview-title">Gambaran umum konten</h3>
-          <div className="ig-perincian-pill">Perincian: Semua ▾</div>
         </div>
 
         {/* Content type tabs */}
@@ -314,74 +326,139 @@ export function InstagramTab() {
           </p>
         )}
 
+        {/* Toggle view */}
+        <div className="ig-chart-toggle">
+          <button
+            className={`ig-chart-toggle-btn${chartView === "organik" ? " active" : ""}`}
+            onClick={() => setChartView("organik")}
+          >
+            Organik &amp; Iklan
+          </button>
+          <button
+            className={`ig-chart-toggle-btn${chartView === "follow_type" ? " active" : ""}`}
+            onClick={() => setChartView("follow_type")}
+          >
+            Follower &amp; Non-Follower
+          </button>
+        </div>
+
         {/* Chart + Breakdown panel */}
         <div className="ig-chart-layout">
           <div className="ig-chart-area">
-            {loadingChart ? (
-              <div className="chart-skeleton" style={{ height: IG_CHART_HEIGHT }} />
-            ) : (dailyChart ?? []).length === 0 ? (
-              <div className="chart-empty" style={{ height: IG_CHART_HEIGHT }}>Belum ada data jangkauan untuk periode ini</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={IG_CHART_HEIGHT}>
-                <LineChart
-                  data={dailyChart ?? []}
-                  margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={fmtAxisDate}
-                    tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }}
-                    tickFormatter={num}
-                    width={36}
-                  />
-                  <Tooltip
-                    labelFormatter={fmtAxisDate}
-                    formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
-                    contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11, fontFamily: "DM Sans" }} />
-                  <Line type="monotone" dataKey="total"   name="Jangkauan"     stroke="#1877F2" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                  <Line type="monotone" dataKey="organic" name="Dari organik"  stroke="#00C6A7" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} strokeDasharray="4 2" />
-                  <Line type="monotone" dataKey="paid"    name="Dari iklan"    stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} strokeDasharray="2 2" />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
+            {chartView === "organik" ? (
+              loadingChart ? (
+                <div className="chart-skeleton" style={{ height: IG_CHART_HEIGHT }} />
+              ) : (dailyChart ?? []).length === 0 ? (
+                <div className="chart-empty" style={{ height: IG_CHART_HEIGHT }}>Belum ada data tayangan untuk periode ini</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={IG_CHART_HEIGHT}>
+                  <LineChart data={dailyChart ?? []} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
+                    <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={36} />
+                    <Tooltip
+                      labelFormatter={fmtAxisDate}
+                      formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
+                      contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11, fontFamily: "DM Sans" }} />
+                    <Line type="monotone" dataKey="total"   name="Tayangan"     stroke="#1877F2" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                    <Line type="monotone" dataKey="organic" name="Dari organik"  stroke="#00C6A7" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} strokeDasharray="4 2" />
+                    <Line type="monotone" dataKey="paid"    name="Dari iklan"    stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} strokeDasharray="2 2" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )
+            ) : (() => {
+              const followData = (insightsTrend ?? []).map(d => ({
+                date: d.date,
+                followers: d.reach_followers ?? 0,
+                nonFollowers: d.reach_non_followers ?? 0,
+              }));
+              const hasFollowData = followData.some(d => d.followers > 0 || d.nonFollowers > 0);
+              return loadingInsights ? (
+                <div className="chart-skeleton" style={{ height: IG_CHART_HEIGHT }} />
+              ) : !hasFollowData ? (
+                <div className="chart-empty" style={{ height: IG_CHART_HEIGHT }}>Data akan tersedia setelah sync berikutnya</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={IG_CHART_HEIGHT}>
+                  <AreaChart data={followData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="ft-g-followers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00C6A7" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#00C6A7" stopOpacity={0.01} />
+                      </linearGradient>
+                      <linearGradient id="ft-g-nonfollowers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#BB2649" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#BB2649" stopOpacity={0.01} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
+                    <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={42} />
+                    <Tooltip
+                      labelFormatter={fmtAxisDate}
+                      formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
+                      contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10, fontFamily: "DM Sans" }} />
+                    <Area type="monotone" dataKey="followers"    name="Pengikut"     stroke="#00C6A7" fill="url(#ft-g-followers)"    strokeWidth={2} />
+                    <Area type="monotone" dataKey="nonFollowers" name="Non-pengikut" stroke="#BB2649" fill="url(#ft-g-nonfollowers)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              );
+            })()}
           </div>
 
           <div className="ig-breakdown-panel">
-            <p className="ig-breakdown-title">Perincian tayangan</p>
-            <p className="ig-breakdown-period">{fmtPeriod(dateStart, dateStop)}</p>
-            {(() => {
-              // Total tayangan dari API route (cocok dengan Meta Business Suite)
-              const totalViews = overview?.views ?? 0;
-
-              // Paid impressions dari ad_breakdown_platform; cap agar tidak melebihi total
-              // (ad platform impressions bisa melebihi account views karena berbeda scope)
-              const rawPaid      = (dailyChart ?? []).reduce((s, d) => s + d.paidImpressions, 0);
-              const paidViews    = Math.min(rawPaid, totalViews);
-              const organicViews = Math.max(0, totalViews - paidViews);
-
-              return (
-                <div className="ig-breakdown-items">
-                  <div className="ig-breakdown-item">
-                    <span className="ig-breakdown-label">Total</span>
-                    <span className="ig-breakdown-value">{num(totalViews)}</span>
-                  </div>
-                  <div className="ig-breakdown-item">
-                    <span className="ig-breakdown-label">Dari organik</span>
-                    <span className="ig-breakdown-value">{num(organicViews)}</span>
-                  </div>
-                  <div className="ig-breakdown-item">
-                    <span className="ig-breakdown-label">Dari iklan</span>
-                    <span className="ig-breakdown-value">{num(paidViews)}</span>
-                  </div>
-                </div>
-              );
-            })()}
+            {chartView === "organik" ? (
+              <>
+                <p className="ig-breakdown-title">Perincian tayangan</p>
+                <p className="ig-breakdown-period">{fmtPeriod(dateStart, dateStop)}</p>
+                {(() => {
+                  const totalViews   = overview?.views ?? 0;
+                  const rawPaid      = (dailyChart ?? []).reduce((s, d) => s + d.paidImpressions, 0);
+                  const paidViews    = Math.min(rawPaid, totalViews);
+                  const organicViews = Math.max(0, totalViews - paidViews);
+                  return (
+                    <div className="ig-breakdown-items">
+                      <div className="ig-breakdown-item">
+                        <span className="ig-breakdown-label">Total</span>
+                        <span className="ig-breakdown-value">{num(totalViews)}</span>
+                      </div>
+                      <div className="ig-breakdown-item">
+                        <span className="ig-breakdown-label">Dari organik</span>
+                        <span className="ig-breakdown-value">{num(organicViews)}</span>
+                      </div>
+                      <div className="ig-breakdown-item">
+                        <span className="ig-breakdown-label">Dari iklan</span>
+                        <span className="ig-breakdown-value">{num(paidViews)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            ) : (
+              <>
+                <p className="ig-breakdown-title">Tayangan per tipe</p>
+                <p className="ig-breakdown-period">{fmtPeriod(dateStart, dateStop)}</p>
+                {(() => {
+                  const totalF   = (insightsTrend ?? []).reduce((s, d) => s + (d.reach_followers    ?? 0), 0);
+                  const totalNF  = (insightsTrend ?? []).reduce((s, d) => s + (d.reach_non_followers ?? 0), 0);
+                  return (
+                    <div className="ig-breakdown-items">
+                      <div className="ig-breakdown-item">
+                        <span className="ig-breakdown-label">Pengikut</span>
+                        <span className="ig-breakdown-value" style={{ color: "#00C6A7" }}>{num(totalF)}</span>
+                      </div>
+                      <div className="ig-breakdown-item">
+                        <span className="ig-breakdown-label">Non-pengikut</span>
+                        <span className="ig-breakdown-value" style={{ color: "#BB2649" }}>{num(totalNF)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -411,127 +488,6 @@ export function InstagramTab() {
         </div>
       </div>
 
-      {/* ── Analytics Charts ── */}
-      <div className="ig-analytics-grid">
-
-        {/* Chart 1: Pertumbuhan Pengikut */}
-        <div className="chart-card">
-          <h3 className="chart-title" style={{ marginBottom: 12 }}>Pertumbuhan Pengikut</h3>
-          {loadingInsights ? (
-            <div className="chart-skeleton" style={{ height: 220 }} />
-          ) : (insightsTrend ?? []).length === 0 ? (
-            <div className="chart-empty" style={{ height: 220 }}>Belum ada data</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={insightsTrend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
-                <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={42} />
-                <Tooltip
-                  labelFormatter={fmtAxisDate}
-                  formatter={(v: unknown) => [num(Number(v ?? 0)), "Pengikut"]}
-                  contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
-                />
-                <Line type="monotone" dataKey="followers_count" name="Pengikut" stroke="#BB2649" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Chart 2: Jangkauan Pengikut vs Non-Pengikut (data nyata dari ig_account_insights) */}
-        {(() => {
-          const reachBreakdownData = (insightsTrend ?? []).map(d => ({
-            date: d.date,
-            followers: d.reach_followers ?? 0,
-            nonFollowers: d.reach_non_followers ?? 0,
-          }));
-          const hasRealData = reachBreakdownData.some(d => d.followers > 0 || d.nonFollowers > 0);
-          return (
-            <div className="chart-card">
-              <div style={{ marginBottom: 12 }}>
-                <h3 className="chart-title" style={{ marginBottom: 2 }}>Jangkauan: Pengikut vs Non-Pengikut</h3>
-                <div style={{ fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>Jangkauan harian dari Meta Insights</div>
-              </div>
-              {loadingInsights ? (
-                <div className="chart-skeleton" style={{ height: 220 }} />
-              ) : !hasRealData ? (
-                <div className="chart-empty" style={{ height: 220 }}>
-                  Data akan tersedia setelah sync berikutnya
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={reachBreakdownData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="ig-g-followers" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00C6A7" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#00C6A7" stopOpacity={0.01} />
-                      </linearGradient>
-                      <linearGradient id="ig-g-nonfollowers" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#BB2649" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#BB2649" stopOpacity={0.01} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
-                    <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={42} />
-                    <Tooltip
-                      labelFormatter={fmtAxisDate}
-                      formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
-                      contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 10, fontFamily: "DM Sans" }} />
-                    <Area type="monotone" dataKey="followers"    name="Pengikut"     stroke="#00C6A7" fill="url(#ig-g-followers)"    strokeWidth={2} />
-                    <Area type="monotone" dataKey="nonFollowers" name="Non-pengikut" stroke="#BB2649" fill="url(#ig-g-nonfollowers)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* Chart 3: Interaksi Harian */}
-        <div className="chart-card">
-          <h3 className="chart-title" style={{ marginBottom: 12 }}>Interaksi Harian</h3>
-          {loadingInsights ? (
-            <div className="chart-skeleton" style={{ height: 220 }} />
-          ) : (insightsTrend ?? []).length === 0 ? (
-            <div className="chart-empty" style={{ height: 220 }}>Belum ada data</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={insightsTrend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <defs>
-                  {[
-                    { id: "ig-g-likes",    color: "#BB2649" },
-                    { id: "ig-g-comments", color: "#2563EB" },
-                    { id: "ig-g-shares",   color: "#16A34A" },
-                    { id: "ig-g-saves",    color: "#D97706" },
-                  ].map(({ id, color }) => (
-                    <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor={color} stopOpacity={0.15} />
-                      <stop offset="95%" stopColor={color} stopOpacity={0.01} />
-                    </linearGradient>
-                  ))}
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
-                <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={36} />
-                <Tooltip
-                  labelFormatter={fmtAxisDate}
-                  formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
-                  contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
-                />
-                <Legend wrapperStyle={{ fontSize: 10, fontFamily: "DM Sans" }} />
-                <Area type="monotone" dataKey="likes_count"    name="Suka"     stroke="#BB2649" fill="url(#ig-g-likes)"    strokeWidth={2} />
-                <Area type="monotone" dataKey="comments_count" name="Komentar" stroke="#2563EB" fill="url(#ig-g-comments)" strokeWidth={2} />
-                <Area type="monotone" dataKey="shares_count"   name="Bagikan"  stroke="#16A34A" fill="url(#ig-g-shares)"   strokeWidth={2} />
-                <Area type="monotone" dataKey="saves_count"    name="Disimpan" stroke="#D97706" fill="url(#ig-g-saves)"    strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-      </div>
-
       {/* ── Demografi Audience (lifetime, dari ig_audience_breakdown) ── */}
       <div className="ig-audience-section">
         <p className="ig-audience-section-title">Demografi Audience</p>
@@ -549,7 +505,13 @@ export function InstagramTab() {
             {/* Usia */}
             {byAge.length > 0 && (
               <div className="chart-card">
-                <h3 className="chart-title" style={{ marginBottom: 8 }}>Usia</h3>
+                <div style={{ marginBottom: 6 }}>
+                  <h3 className="chart-title" style={{ marginBottom: 2 }}>Usia</h3>
+                  <div style={{ fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+                    Total: <strong style={{ color: "var(--gray-900)" }}>{num(byAge.reduce((s, d) => s + d.follower_count, 0))}</strong>
+                    {byAge[0] && <> · Terbanyak: <strong style={{ color: "#BB2649" }}>{byAge[0].breakdown_value}</strong></>}
+                  </div>
+                </div>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={byAge} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
@@ -565,7 +527,14 @@ export function InstagramTab() {
             {/* Gender */}
             {byGender.length > 0 && (
               <div className="chart-card">
-                <h3 className="chart-title" style={{ marginBottom: 8 }}>Gender</h3>
+                <div style={{ marginBottom: 6 }}>
+                  <h3 className="chart-title" style={{ marginBottom: 2 }}>Gender</h3>
+                  <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+                    {byGender.find(g => g.breakdown_value === "F") && <span style={{ color: "#BB2649" }}>P: <strong>{num(byGender.find(g => g.breakdown_value === "F")!.follower_count)}</strong></span>}
+                    {byGender.find(g => g.breakdown_value === "M") && <><span>·</span><span style={{ color: "#2563EB" }}>L: <strong>{num(byGender.find(g => g.breakdown_value === "M")!.follower_count)}</strong></span></>}
+                    {byGender.find(g => g.breakdown_value === "U") && <><span>·</span><span style={{ color: "#9B9BA3" }}>Lainnya: <strong>{num(byGender.find(g => g.breakdown_value === "U")!.follower_count)}</strong></span></>}
+                  </div>
+                </div>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={byGender} margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -585,28 +554,45 @@ export function InstagramTab() {
             {/* Negara */}
             {byCountry.length > 0 && (
               <div className="chart-card">
-                <h3 className="chart-title" style={{ marginBottom: 8 }}>Negara (Top 10)</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={byCountry} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} />
-                    <YAxis type="category" dataKey="breakdown_value" width={32} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
-                    <Tooltip formatter={(v: unknown) => [num(Number(v ?? 0)), "Pengikut"]} contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }} />
-                    <Bar dataKey="follower_count" name="Pengikut" fill="#2563EB" radius={[0, 3, 3, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ marginBottom: 6 }}>
+                  <h3 className="chart-title" style={{ marginBottom: 2 }}>Negara (Top 5)</h3>
+                  <div style={{ fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+                    Terbanyak: <strong style={{ color: "#2563EB" }}>{countryName(byCountry[0]?.breakdown_value ?? "")} ({num(byCountry[0]?.follower_count ?? 0)})</strong>
+                  </div>
+                </div>
+                {(() => {
+                  const top5 = byCountry.slice(0, 5).map(d => ({ ...d, name: countryName(d.breakdown_value) }));
+                  return (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={top5} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} angle={-25} textAnchor="end" interval={0} />
+                        <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={42} />
+                        <Tooltip
+                          formatter={(v: unknown) => [num(Number(v ?? 0)), "Pengikut"]}
+                          contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }} />
+                        <Bar dataKey="follower_count" name="Pengikut" fill="#2563EB" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  );
+                })()}
               </div>
             )}
 
             {/* Kota */}
             {byCity.length > 0 && (
               <div className="chart-card">
-                <h3 className="chart-title" style={{ marginBottom: 8 }}>Kota (Top 10)</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={byCity} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+                <div style={{ marginBottom: 6 }}>
+                  <h3 className="chart-title" style={{ marginBottom: 2 }}>Kota (Top 5)</h3>
+                  <div style={{ fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+                    Terbanyak: <strong style={{ color: "#16A34A" }}>{byCity[0]?.breakdown_value} ({num(byCity[0]?.follower_count ?? 0)})</strong>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={byCity.slice(0, 5)} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} />
-                    <YAxis type="category" dataKey="breakdown_value" width={80} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
+                    <YAxis type="category" dataKey="breakdown_value" width={90} interval={0} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
                     <Tooltip formatter={(v: unknown) => [num(Number(v ?? 0)), "Pengikut"]} contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }} />
                     <Bar dataKey="follower_count" name="Pengikut" fill="#16A34A" radius={[0, 3, 3, 0]} />
                   </BarChart>
@@ -614,50 +600,55 @@ export function InstagramTab() {
               </div>
             )}
 
+            {/* Pertumbuhan Pengikut */}
+            {(() => {
+              const trend = insightsTrend ?? [];
+              const lastFollowers  = [...trend].reverse().find(d => d.followers_count > 0)?.followers_count ?? 0;
+              const firstFollowers = trend.find(d => d.followers_count > 0)?.followers_count ?? 0;
+              const delta = lastFollowers - firstFollowers;
+              return (
+                <div className="chart-card">
+                  <div style={{ marginBottom: 8 }}>
+                    <h3 className="chart-title" style={{ marginBottom: 2 }}>Pertumbuhan Pengikut</h3>
+                    {trend.length > 0 && (
+                      <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+                        <span>Saat ini: <strong style={{ color: "var(--gray-900)" }}>{num(lastFollowers)}</strong></span>
+                        {delta !== 0 && (
+                          <><span>·</span>
+                          <span style={{ color: delta > 0 ? "#16A34A" : "#DC2626" }}>
+                            {delta > 0 ? "+" : ""}{num(delta)} periode ini
+                          </span></>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {loadingInsights ? (
+                    <div className="chart-skeleton" style={{ height: 220 }} />
+                  ) : trend.length === 0 ? (
+                    <div className="chart-empty" style={{ height: 220 }}>Belum ada data</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={trend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                        <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
+                        <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={42} />
+                        <Tooltip
+                          labelFormatter={fmtAxisDate}
+                          formatter={(v: unknown) => [num(Number(v ?? 0)), "Pengikut"]}
+                          contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
+                        />
+                        <Line type="monotone" dataKey="followers_count" name="Pengikut" stroke="#BB2649" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              );
+            })()}
+
           </div>
         )}
       </div>
 
-      {/* ── Jam Aktif Followers ── */}
-      <div className="ig-audience-section">
-        <p className="ig-audience-section-title">Jam Aktif Followers</p>
-        <p style={{ fontSize: 12, color: tickColor, marginBottom: 12, fontFamily: "DM Sans" }}>
-          Rata-rata 7 hari terakhir — waktu WIB (UTC+7)
-        </p>
-        {loadingOnline ? (
-          <div className="chart-card"><div className="chart-skeleton" style={{ height: 220 }} /></div>
-        ) : onlineFollowers.every(d => d.avg_followers === 0) ? (
-          <div className="chart-empty" style={{ padding: "40px 0" }}>
-            Data jam aktif belum tersedia — akan muncul setelah sync berikutnya
-          </div>
-        ) : (
-          <div className="chart-card">
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={onlineFollowers} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="ig-g-online" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#BB2649" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#BB2649" stopOpacity={0.01} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis
-                  dataKey="hour"
-                  tickFormatter={h => `${String(h).padStart(2, "0")}:00`}
-                  tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }}
-                />
-                <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={42} />
-                <Tooltip
-                  labelFormatter={h => `Pukul ${String(h).padStart(2, "0")}:00`}
-                  formatter={(v: unknown) => [num(Number(v ?? 0)), "Pengikut aktif"]}
-                  contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
-                />
-                <Area type="monotone" dataKey="avg_followers" name="Pengikut aktif" stroke="#BB2649" fill="url(#ig-g-online)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
 
     </div>
   );

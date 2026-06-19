@@ -1024,6 +1024,17 @@ body {
 @media (max-width: 1100px) { .ig-analytics-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 700px)  { .ig-analytics-grid { grid-template-columns: 1fr; } }
 
+/* ── INSTAGRAM CHART TOGGLE ── */
+.ig-chart-toggle { display: flex; gap: 6px; margin: 12px 0 0 0; }
+.ig-chart-toggle-btn {
+  font-size: 12px; font-family: DM Sans, sans-serif; font-weight: 500;
+  padding: 4px 14px; border-radius: 20px;
+  border: 1px solid var(--gray-200); background: transparent;
+  color: var(--gray-500); cursor: pointer; transition: all 0.15s;
+}
+.ig-chart-toggle-btn.active { background: #BB2649; border-color: #BB2649; color: #fff; }
+.ig-chart-toggle-btn:hover:not(.active) { border-color: #BB2649; color: #BB2649; }
+
 /* ── INSTAGRAM AUDIENCE SECTION ── */
 .ig-audience-section { display: flex; flex-direction: column; }
 .ig-audience-section-title {
@@ -1033,11 +1044,12 @@ body {
 }
 .ig-audience-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
   margin-top: 12px;
 }
-@media (max-width: 900px) { .ig-audience-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .ig-audience-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px)  { .ig-audience-grid { grid-template-columns: 1fr; } }
 
 /* ── DATABASE TAB ── */
 .db-tab { display: flex; flex-direction: column; gap: 16px; }
