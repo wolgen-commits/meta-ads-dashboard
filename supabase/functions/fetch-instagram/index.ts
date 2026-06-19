@@ -293,8 +293,7 @@ Deno.serve(async (req: Request) => {
       return;
     }
     const { error } = await supabase
-      .from("ig_account_insights")
-      .upsert(rows, { onConflict: "ig_account_id,date" });
+      .rpc("upsert_ig_account_insights", { p_rows: rows });
     if (error) console.error("upsert ig_account_insights:", error.message);
     else console.log(`Upserted ${rows.length} account insight rows for ${igAccountId}`);
   }

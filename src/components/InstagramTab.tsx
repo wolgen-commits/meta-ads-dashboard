@@ -626,6 +626,11 @@ export function InstagramTab() {
                     <div className="chart-skeleton" style={{ height: 220 }} />
                   ) : trend.length === 0 ? (
                     <div className="chart-empty" style={{ height: 220 }}>Belum ada data</div>
+                  ) : trend.every(d => d.followers_count === 0) ? (
+                    <div className="chart-empty" style={{ height: 220 }}>
+                      Data pengikut hanya tersedia untuk 30 hari terakhir.<br />
+                      Pilih rentang tanggal yang lebih baru.
+                    </div>
                   ) : (
                     <ResponsiveContainer width="100%" height={220}>
                       <LineChart data={trend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
