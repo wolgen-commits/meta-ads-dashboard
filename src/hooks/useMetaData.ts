@@ -817,40 +817,50 @@ export function useIgDailyChart(accountId: string, dateStart: string, dateStop: 
   );
 }
 
-export function useIgTopMedia(accountId: string, dateStart: string, dateStop: string, limit = 10) {
+export function useIgTopMedia(accountId: string, _dateStart: string, _dateStop: string, limit = 10) {
   return useSWR<(IgMedia & IgMediaInsight)[]>(
-    ["ig_top_media", accountId, dateStart, dateStop, limit],
+    ["ig_top_media_alltime", accountId, limit],
     async () => {
       if (!accountId) return [];
 
-      const { data: mediaData, error: mediaError } = await supabase
+      // Step 1: Ambil semua media ID (non-story) untuk akun ini
+      const { data: mediaIdRows, error: mediaIdErr } = await supabase
         .from("ig_media")
-        .select("*")
+        .select("id")
         .eq("ig_account_id", accountId)
-        .gte("timestamp", `${dateStart}T00:00:00`)
-        .lte("timestamp", `${dateStop}T23:59:59`)
-        .not("media_product_type", "eq", "STORY")
-        .order("timestamp", { ascending: false })
-        .limit(limit * 3);
-      if (mediaError) throw mediaError;
+        .not("media_product_type", "eq", "STORY");
+      if (mediaIdErr) throw mediaIdErr;
 
-      const mediaItems = (mediaData ?? []) as IgMedia[];
-      if (mediaItems.length === 0) return [];
+      const allIds = (mediaIdRows ?? []).map((r: { id: string }) => r.id);
+      if (allIds.length === 0) return [];
 
-      const { data: insightData, error: insightError } = await supabase
+      // Step 2: Ambil top N insights berdasarkan tayangan (impressions) tertinggi
+      const { data: insightData, error: insightErr } = await supabase
         .from("ig_media_insights")
         .select("*")
-        .in("media_id", mediaItems.map(m => m.id));
-      if (insightError) throw insightError;
+        .in("media_id", allIds)
+        .order("impressions", { ascending: false })
+        .limit(limit);
+      if (insightErr) throw insightErr;
 
-      const insightsMap = new Map(
-        (insightData ?? []).map((i: IgMediaInsight) => [i.media_id, i]),
+      const topInsights = (insightData ?? []) as IgMediaInsight[];
+      if (topInsights.length === 0) return [];
+
+      // Step 3: Ambil detail media untuk top N tersebut
+      const topIds = topInsights.map(i => i.media_id);
+      const { data: mediaData, error: mediaErr } = await supabase
+        .from("ig_media")
+        .select("*")
+        .in("id", topIds);
+      if (mediaErr) throw mediaErr;
+
+      const mediaMap = new Map(
+        (mediaData ?? []).map((m: IgMedia) => [m.id, m]),
       );
 
-      return mediaItems
-        .map(m => ({ ...m, ...(insightsMap.get(m.id) ?? {}) }) as IgMedia & IgMediaInsight)
-        .sort((a, b) => (b.impressions ?? 0) - (a.impressions ?? 0))
-        .slice(0, limit);
+      return topInsights
+        .map(ins => ({ ...mediaMap.get(ins.media_id)!, ...ins }) as IgMedia & IgMediaInsight)
+        .filter(m => m.id);
     },
     { refreshInterval: REVALIDATE },
   );
