@@ -817,6 +817,35 @@ export function useIgDailyChart(accountId: string, dateStart: string, dateStop: 
   );
 }
 
+export type IgInsightTrend = {
+  date: string;
+  followers_count: number;
+  reach: number;
+  likes_count: number;
+  comments_count: number;
+  shares_count: number;
+  saves_count: number;
+};
+
+export function useIgAccountInsightsTrend(accountId: string, dateStart: string, dateStop: string) {
+  return useSWR<IgInsightTrend[]>(
+    ["ig_account_insights_trend", accountId, dateStart, dateStop],
+    async () => {
+      if (!accountId) return [];
+      const { data, error } = await supabase
+        .from("ig_account_insights")
+        .select("date,followers_count,reach,likes_count,comments_count,shares_count,saves_count")
+        .eq("ig_account_id", accountId)
+        .gte("date", dateStart)
+        .lte("date", dateStop)
+        .order("date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as IgInsightTrend[];
+    },
+    { refreshInterval: REVALIDATE },
+  );
+}
+
 export function useIgTopMedia(accountId: string, _dateStart: string, _dateStop: string, limit = 10) {
   return useSWR<(IgMedia & IgMediaInsight)[]>(
     ["ig_top_media_alltime", accountId, limit],

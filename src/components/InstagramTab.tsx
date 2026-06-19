@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { useIgAccounts, useIgContentOverview, useIgDailyChart, useIgTopMedia } from "@/hooks/useMetaData";
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useIgAccounts, useIgContentOverview, useIgDailyChart, useIgTopMedia, useIgAccountInsightsTrend } from "@/hooks/useMetaData";
 import type { IgMedia, IgMediaInsight } from "@/hooks/useMetaData";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -105,6 +105,9 @@ export function InstagramTab() {
   );
   const { data: topMedia, isLoading: loadingMedia } = useIgTopMedia(
     currentId, "2000-01-01", isoDate(0), 10,
+  );
+  const { data: insightsTrend, isLoading: loadingInsights } = useIgAccountInsightsTrend(
+    currentId, dateStart, dateStop,
   );
 
   const { theme } = useTheme();
@@ -329,6 +332,115 @@ export function InstagramTab() {
             (topMedia ?? []).map(m => <PopularCard key={m.id} media={m} />)
           )}
         </div>
+      </div>
+
+      {/* ── Analytics Charts ── */}
+      <div className="ig-analytics-grid">
+
+        {/* Chart 1: Pertumbuhan Pengikut */}
+        <div className="chart-card">
+          <h3 className="chart-title" style={{ marginBottom: 12 }}>Pertumbuhan Pengikut</h3>
+          {loadingInsights ? (
+            <div className="chart-skeleton" style={{ height: 220 }} />
+          ) : (insightsTrend ?? []).length === 0 ? (
+            <div className="chart-empty" style={{ height: 220 }}>Belum ada data</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={insightsTrend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
+                <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={42} />
+                <Tooltip
+                  labelFormatter={fmtAxisDate}
+                  formatter={(v: unknown) => [num(Number(v ?? 0)), "Pengikut"]}
+                  contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
+                />
+                <Line type="monotone" dataKey="followers_count" name="Pengikut" stroke="#BB2649" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Chart 2: Jangkauan Organik vs Berbayar (proxy follower vs non-follower) */}
+        <div className="chart-card">
+          <div style={{ marginBottom: 12 }}>
+            <h3 className="chart-title" style={{ marginBottom: 2 }}>Jangkauan: Pengikut vs Non-Pengikut</h3>
+            <div style={{ fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>Organik ≈ pengikut · Berbayar = dari iklan</div>
+          </div>
+          {loadingChart ? (
+            <div className="chart-skeleton" style={{ height: 220 }} />
+          ) : (dailyChart ?? []).length === 0 ? (
+            <div className="chart-empty" style={{ height: 220 }}>Belum ada data</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={dailyChart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="ig-g-organic" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00C6A7" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#00C6A7" stopOpacity={0.01} />
+                  </linearGradient>
+                  <linearGradient id="ig-g-paid" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.01} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
+                <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={42} />
+                <Tooltip
+                  labelFormatter={fmtAxisDate}
+                  formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
+                  contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
+                />
+                <Legend wrapperStyle={{ fontSize: 10, fontFamily: "DM Sans" }} />
+                <Area type="monotone" dataKey="organic" name="Organik (pengikut)" stroke="#00C6A7" fill="url(#ig-g-organic)" strokeWidth={2} />
+                <Area type="monotone" dataKey="paid"    name="Berbayar (iklan)"  stroke="#F59E0B" fill="url(#ig-g-paid)"    strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Chart 3: Interaksi Harian */}
+        <div className="chart-card">
+          <h3 className="chart-title" style={{ marginBottom: 12 }}>Interaksi Harian</h3>
+          {loadingInsights ? (
+            <div className="chart-skeleton" style={{ height: 220 }} />
+          ) : (insightsTrend ?? []).length === 0 ? (
+            <div className="chart-empty" style={{ height: 220 }}>Belum ada data</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={insightsTrend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  {[
+                    { id: "ig-g-likes",    color: "#BB2649" },
+                    { id: "ig-g-comments", color: "#2563EB" },
+                    { id: "ig-g-shares",   color: "#16A34A" },
+                    { id: "ig-g-saves",    color: "#D97706" },
+                  ].map(({ id, color }) => (
+                    <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor={color} stopOpacity={0.15} />
+                      <stop offset="95%" stopColor={color} stopOpacity={0.01} />
+                    </linearGradient>
+                  ))}
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
+                <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={36} />
+                <Tooltip
+                  labelFormatter={fmtAxisDate}
+                  formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
+                  contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
+                />
+                <Legend wrapperStyle={{ fontSize: 10, fontFamily: "DM Sans" }} />
+                <Area type="monotone" dataKey="likes_count"    name="Suka"     stroke="#BB2649" fill="url(#ig-g-likes)"    strokeWidth={2} />
+                <Area type="monotone" dataKey="comments_count" name="Komentar" stroke="#2563EB" fill="url(#ig-g-comments)" strokeWidth={2} />
+                <Area type="monotone" dataKey="shares_count"   name="Bagikan"  stroke="#16A34A" fill="url(#ig-g-shares)"   strokeWidth={2} />
+                <Area type="monotone" dataKey="saves_count"    name="Disimpan" stroke="#D97706" fill="url(#ig-g-saves)"    strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
       </div>
 
     </div>
