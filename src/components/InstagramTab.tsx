@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useIgAccounts, useIgContentOverview, useIgDailyChart, useIgTopMedia, useIgAccountInsightsTrend } from "@/hooks/useMetaData";
 import type { IgMedia, IgMediaInsight } from "@/hooks/useMetaData";
@@ -49,15 +49,10 @@ const CONTENT_TABS: { key: ContentType; label: string }[] = [
   { key: "cerita",    label: "Cerita"    },
 ];
 
-function PopularCard({ media }: { media: IgMedia & Partial<IgMediaInsight> }) {
+function PopularCard({ media, onClick }: { media: IgMedia & Partial<IgMediaInsight>; onClick: () => void }) {
   const isVideo = media.media_product_type === "REELS" || media.media_type === "VIDEO";
   return (
-    <a
-      href={media.permalink ?? "#"}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="ig-popular-card"
-    >
+    <div className="ig-popular-card" onClick={onClick} style={{ cursor: "pointer" }}>
       <div className="ig-card-thumb">
         {media.thumbnail_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -83,7 +78,83 @@ function PopularCard({ media }: { media: IgMedia & Partial<IgMediaInsight> }) {
           <span title="Bagikan">↗ {num(media.shares ?? 0)}</span>
         </div>
       </div>
-    </a>
+    </div>
+  );
+}
+
+function MediaDetailModal({ media, onClose }: { media: IgMedia & Partial<IgMediaInsight>; onClose: () => void }) {
+  const isVideo  = media.media_product_type === "REELS" || media.media_type === "VIDEO";
+  const isReels  = media.media_product_type === "REELS";
+  const typeLabel = isReels ? "Reels" : isVideo ? "Video" : "Postingan";
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const metrics: { label: string; value: number; show?: boolean }[] = [
+    { label: "Tayangan",  value: (media as IgMediaInsight).impressions ?? 0 },
+    { label: "Jangkauan", value: media.reach   ?? 0 },
+    { label: "Suka",      value: media.likes   ?? 0 },
+    { label: "Komentar",  value: media.comments ?? 0 },
+    { label: "Bagikan",   value: media.shares  ?? 0 },
+    { label: "Disimpan",  value: media.saved   ?? 0 },
+    { label: "Ditonton",  value: media.video_views ?? 0, show: isVideo },
+    { label: "Diputar",   value: media.plays       ?? 0, show: isReels },
+  ].filter(m => m.show !== false);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box modal-box--ig" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">Detail Konten</span>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="ig-modal-body">
+          <div className="ig-modal-thumb">
+            {media.thumbnail_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={media.thumbnail_url} alt="" />
+            ) : (
+              <div className="ig-modal-thumb-placeholder">
+                <span>{isVideo ? "▶" : "🖼"}</span>
+              </div>
+            )}
+          </div>
+          <div className="ig-modal-info">
+            <span className="ig-modal-type">{isVideo ? "▶" : "📷"} {typeLabel}</span>
+            <span className="ig-modal-date">{fmtCardDate(media.timestamp)}</span>
+            <p className="ig-modal-caption">
+              {media.caption ?? "(tanpa caption)"}
+            </p>
+          </div>
+        </div>
+
+        <div className="ig-modal-metrics">
+          {metrics.map(m => (
+            <div key={m.label} className="ig-modal-metric">
+              <span className="ig-modal-metric-label">{m.label}</span>
+              <span className="ig-modal-metric-value">{m.value.toLocaleString("id-ID")}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="ig-modal-footer">
+          {media.permalink && (
+            <a
+              href={media.permalink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ig-action-btn"
+            >
+              Buka di Instagram ↗
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -92,6 +163,7 @@ export function InstagramTab() {
   const [dateStop,  setDateStop]  = useState(isoDate(0));
   const [activeAccount, setActiveAccount] = useState<string | null>(null);
   const [contentTab, setContentTab] = useState<ContentType>("semua");
+  const [selectedMedia, setSelectedMedia] = useState<(IgMedia & Partial<IgMediaInsight>) | null>(null);
 
   const { data: accounts, isLoading: loadingAccounts } = useIgAccounts();
   const currentId      = activeAccount ?? accounts?.[0]?.id ?? "";
@@ -123,6 +195,9 @@ export function InstagramTab() {
 
   return (
     <div className="ig-tab">
+      {selectedMedia && (
+        <MediaDetailModal media={selectedMedia} onClose={() => setSelectedMedia(null)} />
+      )}
 
       {/* ── Header: lihat lebih banyak + account selector + date range ── */}
       <div className="ig-tab-header">
@@ -329,7 +404,7 @@ export function InstagramTab() {
           ) : (topMedia ?? []).length === 0 ? (
             <p style={{ color: "var(--gray-400)", fontSize: 14 }}>Belum ada konten.</p>
           ) : (
-            (topMedia ?? []).map(m => <PopularCard key={m.id} media={m} />)
+            (topMedia ?? []).map(m => <PopularCard key={m.id} media={m} onClick={() => setSelectedMedia(m)} />)
           )}
         </div>
       </div>
