@@ -104,7 +104,7 @@ export function InstagramTab() {
     currentId, dateStart, dateStop,
   );
   const { data: topMedia, isLoading: loadingMedia } = useIgTopMedia(
-    currentId, dateStart, dateStop, 10,
+    currentId, "2000-01-01", isoDate(0), 10,
   );
 
   const { theme } = useTheme();
@@ -309,7 +309,7 @@ export function InstagramTab() {
       {/* ── Konten populer ── */}
       <div className="ig-popular-section">
         <div className="ig-popular-header">
-          <h3 className="ig-popular-title">Konten populer berdasarkan tayangan</h3>
+          <h3 className="ig-popular-title">Konten populer sepanjang masa</h3>
           <div className="ig-popular-actions">
             <button className="ig-action-btn">Promosikan konten</button>
             <a href={igUrl} target="_blank" rel="noopener noreferrer" className="ig-action-btn">
@@ -324,7 +324,7 @@ export function InstagramTab() {
               <div key={i} className="ig-popular-card ig-popular-card--skeleton" />
             ))
           ) : (topMedia ?? []).length === 0 ? (
-            <p style={{ color: "var(--gray-400)", fontSize: 14 }}>Belum ada konten dalam periode ini.</p>
+            <p style={{ color: "var(--gray-400)", fontSize: 14 }}>Belum ada konten.</p>
           ) : (
             (topMedia ?? []).map(m => <PopularCard key={m.id} media={m} />)
           )}
