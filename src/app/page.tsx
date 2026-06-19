@@ -7,11 +7,11 @@ import { AgeChart }           from "@/components/AgeChart";
 import { DemographicChart }   from "@/components/DemographicChart";
 import { RegionChart }        from "@/components/RegionChart";
 import { PlatformMediaChart } from "@/components/PlatformMediaChart";
-import { SyncStatus }         from "@/components/SyncStatus";
 import { InstagramTab }       from "@/components/InstagramTab";
 import { DatabaseTab }        from "@/components/DatabaseTab";
 import { MetaAdLibraryTab }  from "@/components/MetaAdLibraryTab";
 import { useKpiTotals, useCampaignList, useAdsetList, useAdList } from "@/hooks/useMetaData";
+import { useTheme } from "@/hooks/useTheme";
 
 const isoDate = (offset = 0) => {
   const d = new Date();
@@ -200,6 +200,7 @@ export default function DashboardPage() {
   };
 
   const { totals, isLoading } = useKpiTotals(dateStart, dateStop, effectiveCampaignIds, effectiveAdsetIds, effectiveAdIds);
+  const { theme, toggleTheme, mounted } = useTheme();
 
   return (
     <div className="dashboard">
@@ -211,7 +212,14 @@ export default function DashboardPage() {
           <span className="brand-title">Marketing Dashboard</span>
         </div>
         <div className="dash-controls">
-          <SyncStatus />
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            title={mounted && theme === "dark" ? "Mode Terang" : "Mode Gelap"}
+            suppressHydrationWarning
+          >
+            {mounted ? (theme === "dark" ? "☀" : "☾") : "☾"}
+          </button>
         </div>
       </header>
 

@@ -61,7 +61,7 @@ export function DemographicChart({ dateStart, dateStop, campaignIds = [], metric
       <div style={{ marginBottom: 8 }}>
         <h3 className="chart-title" style={{ marginBottom: 2 }}>Demografis Usia & Gender — {metricLabel}</h3>
         <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
-          <span>Est. Total: <strong style={{ color: "#1F1F22" }}>{num(totalAll)}</strong></span>
+          <span>Est. Total: <strong style={{ color: "var(--gray-900)" }}>{num(totalAll)}</strong></span>
           <span>·</span>
           <span style={{ color: "#BB2649" }}>P: <strong>{num(totalPerempuan)}</strong></span>
           <span>·</span>
