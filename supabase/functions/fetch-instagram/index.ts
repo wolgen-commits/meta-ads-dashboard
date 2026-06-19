@@ -242,11 +242,10 @@ Deno.serve(async (req: Request) => {
 
   // ── Sync account-level daily insights (@magentaindopack saja) ──────────
   async function syncAccountInsights(igAccountId: string): Promise<void> {
-    // Meta API batasi max 30 hari per request — query 3 chunk x 28 hari (total ~84 hari)
-    // Hanya metric yang mendukung time series (values array) di v22.0
-    // profile_views/views/website_clicks hanya tersedia sebagai total_value aggregate
+    // Cukup fetch 1 chunk (28 hari terakhir) — data lama sudah tersimpan di DB dan tidak berubah.
+    // follower_count dan reach hari-hari sebelumnya sudah stabil, tidak perlu di-fetch ulang.
     const CHUNK_DAYS = 28;
-    const NUM_CHUNKS = 3;
+    const NUM_CHUNKS = 1;
     const nowSec = Math.floor(Date.now() / 1000);
 
     const byDate: Record<string, Record<string, number>> = {};
@@ -255,8 +254,7 @@ Deno.serve(async (req: Request) => {
       const chunkUntil = nowSec - i * CHUNK_DAYS * 86400;
       const chunkSince = chunkUntil - CHUNK_DAYS * 86400;
 
-      // follower_count hanya tersedia 30 hari terakhir — chunk 0 saja
-      const metric = i === 0 ? "reach,follower_count" : "reach";
+      const metric = "reach,follower_count";
       const data = await apiFetchPaginated<{
         name: string;
         values: Array<{ value: number; end_time: string }>;
