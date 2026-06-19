@@ -314,19 +314,18 @@ export function useEngagementSummary(
   return useSWR<CampaignEngagementDaily[]>(
     ["engagement_summary", dateStart, dateStop, sc.join(","), sa.join(","), si.join(","), platform],
     async () => {
-      let activeAdIds: string[] = [];
       const isPlatformFiltered = platform !== "all";
 
       if (isPlatformFiltered) {
-        let q = supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let platformQuery: any = supabase
           .from("ad_breakdown_platform")
-          .select("ad_id")
-          .eq("publisher_platform", platform)
+          .select("ad_id,campaign_id,date_start,publisher_platform,impressions")
           .gte("date_start", dateStart)
           .lte("date_start", dateStop);
 
         if (si.length > 0) {
-          q = q.in("ad_id", si);
+          platformQuery = platformQuery.in("ad_id", si);
         } else if (sa.length > 0) {
           const { data: adsInAdsets } = await supabase
             .from("meta_ads")
@@ -335,22 +334,68 @@ export function useEngagementSummary(
           const adRows = (adsInAdsets ?? []) as Array<{ id: string }>;
           const adIdsInAdsets = adRows.map((a) => a.id);
           if (adIdsInAdsets.length > 0) {
-            q = q.in("ad_id", adIdsInAdsets);
+            platformQuery = platformQuery.in("ad_id", adIdsInAdsets);
           } else {
             return []; // Tidak ada ad di adset ini
           }
         }
 
         if (sc.length > 0) {
-          q = q.in("campaign_id", sc);
+          platformQuery = platformQuery.in("campaign_id", sc);
         }
 
-        const { data: platRows, error: platErr } = await q;
-        if (platErr) throw platErr;
+        const { data: allPlatformRows, error: allPlatformErr } = await platformQuery as {
+          data: Array<{ ad_id: string; campaign_id: string; date_start: string; publisher_platform: string | null; impressions: number | null }> | null;
+          error: { message: string } | null;
+        };
+        if (allPlatformErr) throw allPlatformErr;
 
-        const rows = platRows as Array<{ ad_id: string }>;
-        activeAdIds = Array.from(new Set(rows.map((r) => r.ad_id).filter(Boolean)));
+        const selectedPlatformRows = (allPlatformRows ?? []).filter((row) => row.publisher_platform === platform);
+        const activeAdIds = Array.from(new Set(selectedPlatformRows.map((row) => row.ad_id).filter(Boolean)));
         if (activeAdIds.length === 0) return [];
+
+        const totalImpressionsByAdDate: Record<string, number> = {};
+        const selectedImpressionsByAdDate: Record<string, number> = {};
+        for (const row of allPlatformRows ?? []) {
+          const key = `${row.ad_id}|${row.date_start}`;
+          totalImpressionsByAdDate[key] = (totalImpressionsByAdDate[key] ?? 0) + (row.impressions ?? 0);
+        }
+        for (const row of selectedPlatformRows) {
+          const key = `${row.ad_id}|${row.date_start}`;
+          selectedImpressionsByAdDate[key] = (selectedImpressionsByAdDate[key] ?? 0) + (row.impressions ?? 0);
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let engagementQuery: any = supabase
+          .from("engagement_metrics")
+          .select("ad_id,campaign_id,date_start,post_reactions,post_comments,post_shares,post_saves,video_views")
+          .gte("date_start", dateStart)
+          .lte("date_start", dateStop)
+          .in("ad_id", activeAdIds)
+          .order("date_start", { ascending: true });
+        if (sc.length > 0) engagementQuery = engagementQuery.in("campaign_id", sc);
+
+        const { data: engagementRows, error: engagementErr } = await engagementQuery as {
+          data: Array<CampaignEngagementDaily & { ad_id: string }> | null;
+          error: { message: string } | null;
+        };
+        if (engagementErr) throw engagementErr;
+
+        return (engagementRows ?? []).map((row) => {
+          const key = `${row.ad_id}|${row.date_start}`;
+          const total = totalImpressionsByAdDate[key] ?? 0;
+          const selected = selectedImpressionsByAdDate[key] ?? 0;
+          const share = total > 0 ? selected / total : 0;
+
+          return {
+            ...row,
+            post_reactions: Math.round((row.post_reactions ?? 0) * share),
+            post_comments:  Math.round((row.post_comments  ?? 0) * share),
+            post_shares:    Math.round((row.post_shares    ?? 0) * share),
+            post_saves:     Math.round((row.post_saves     ?? 0) * share),
+            video_views:     Math.round((row.video_views     ?? 0) * share),
+          };
+        });
       }
 
       let query = supabase
@@ -360,13 +405,9 @@ export function useEngagementSummary(
         .lte("date_start", dateStop)
         .order("date_start", { ascending: true });
 
-      if (isPlatformFiltered) {
-        query = query.in("ad_id", activeAdIds);
-      } else {
-        if (si.length > 0) query = query.in("ad_id", si);
-        else if (sa.length > 0) query = query.in("adset_id", sa);
-        if (sc.length > 0) query = query.in("campaign_id", sc);
-      }
+      if (si.length > 0) query = query.in("ad_id", si);
+      else if (sa.length > 0) query = query.in("adset_id", sa);
+      if (sc.length > 0) query = query.in("campaign_id", sc);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -454,21 +495,33 @@ export function useAudienceWithMessaging(
     if (!audienceData) return undefined;
     if (!mcTotals)     return audienceData;
 
-    // Hitung total impresi per (campaign_id, date_start) dari breakdown ini
-    const totalImpr: Record<string, number> = {};
-    for (const row of audienceData) {
-      const k = `${row.campaign_id}|${row.date_start}`;
-      totalImpr[k] = (totalImpr[k] ?? 0) + (row.impressions ?? 0);
-    }
+    const mcTotal = Object.values(mcTotals).reduce((sum, value) => sum + value, 0);
+    const imprTotal = audienceData.reduce((sum, row) => sum + (row.impressions ?? 0), 0);
+    let assigned = 0;
 
-    // Distribusikan messaging_conversations secara proporsional ke tiap segmen
-    return audienceData.map(row => {
-      const k         = `${row.campaign_id}|${row.date_start}`;
-      const imprTotal = totalImpr[k]  ?? 0;
-      const mcTotal   = mcTotals[k]   ?? 0;
-      const share     = imprTotal > 0 ? (row.impressions ?? 0) / imprTotal : 0;
-      return { ...row, messaging_conversations: Math.round(mcTotal * share) };
+    // Distribusikan total percakapan periode filter ke semua segmen yang tersedia.
+    // Ini menjaga total chart tetap mengikuti KPI meski breakdown wilayah tidak ada
+    // untuk setiap campaign+tanggal.
+    const allocations = audienceData.map((row) => {
+      const raw = imprTotal > 0
+        ? mcTotal * ((row.impressions ?? 0) / imprTotal)
+        : mcTotal / audienceData.length;
+      const base = Math.floor(raw);
+      assigned += base;
+      return { row, base, remainder: raw - base };
     });
+
+    let remaining = mcTotal - assigned;
+    return allocations
+      .sort((a, b) => b.remainder - a.remainder)
+      .map((allocation) => {
+        const extra = remaining > 0 ? 1 : 0;
+        remaining -= extra;
+        return {
+          ...allocation.row,
+          messaging_conversations: allocation.base + extra,
+        };
+      });
   }, [audienceData, mcTotals]);
 
   return { data: enriched, isLoading: loadAud || loadMc };
@@ -606,9 +659,7 @@ export function useIgContentOverview(
   dateStop: string,
   contentType: ContentType,
 ) {
-  type MediaRow   = { id: string; media_product_type: string; timestamp: string };
-  type InsightRow = { media_id: string; impressions: number; reach: number; likes: number; comments: number; shares: number; saved: number };
-  type DayData    = { date: string; impressions: number; reach: number; engagement: number };
+  type DayData = { date: string; impressions: number; reach: number; engagement: number };
 
   return useSWR(
     ["ig_content_overview", accountId, dateStart, dateStop, contentType],
@@ -624,99 +675,103 @@ export function useIgContentOverview(
       };
       if (!accountId) return empty;
 
-      // Hitung periode sebelumnya (sama durasi, tepat sebelum dateStart)
-      const startMs   = new Date(dateStart).getTime();
-      const stopMs    = new Date(dateStop).getTime();
-      const durMs     = stopMs - startMs + 86_400_000; // inklusif
-      const prevStop  = new Date(startMs - 86_400_000);
-      const prevStart = new Date(startMs - durMs);
-      const prevStartStr = prevStart.toISOString().slice(0, 10);
-      const prevStopStr  = prevStop.toISOString().slice(0, 10);
+      // Periode sebelumnya (sama durasi, tepat sebelum dateStart)
+      const startMs      = new Date(dateStart).getTime();
+      const stopMs       = new Date(dateStop).getTime();
+      const durMs        = stopMs - startMs + 86_400_000;
+      const prevStartStr = new Date(startMs - durMs).toISOString().slice(0, 10);
+      const prevStopStr  = new Date(startMs - 86_400_000).toISOString().slice(0, 10);
 
-      async function fetchPeriod(from: string, to: string) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let q: any = supabase
-          .from("ig_media")
-          .select("id,media_product_type,timestamp")
-          .eq("ig_account_id", accountId)
-          .gte("timestamp", `${from}T00:00:00`)
-          .lte("timestamp", `${to}T23:59:59`);
+      // Untuk cerita: gunakan per-post metrics dari Supabase (account-level tidak ada breakdown cerita)
+      if (contentType === "cerita") {
+        type MediaRow   = { id: string };
+        type InsightRow = { media_id: string; reach: number; likes: number; comments: number; shares: number; saved: number };
 
-        if (contentType === "postingan") q = q.in("media_product_type", ["FEED", "REELS"]);
-        else if (contentType === "cerita") q = q.eq("media_product_type", "STORY");
+        async function fetchStoriesPeriod(from: string, to: string) {
+          const { data: mediaData } = await supabase
+            .from("ig_media")
+            .select("id")
+            .eq("ig_account_id", accountId)
+            .eq("media_product_type", "STORY")
+            .gte("timestamp", `${from}T00:00:00`)
+            .lte("timestamp", `${to}T23:59:59`) as { data: MediaRow[] | null };
 
-        const { data: mediaData, error: mediaError } = await q as { data: MediaRow[] | null; error: { message: string } | null };
-        if (mediaError) throw mediaError;
+          const media = mediaData ?? [];
+          if (media.length === 0) return { views: 0, reach: 0, engagement: 0, noInsights: false };
 
-        const media = mediaData ?? [];
-        if (media.length === 0) return { views: 0, reach: 0, engagement: 0, noInsights: false, byDate: [] as DayData[] };
+          const { data: insightData } = await supabase
+            .from("ig_media_insights")
+            .select("media_id,reach,likes,comments,shares,saved")
+            .in("media_id", media.map(m => m.id)) as { data: InsightRow[] | null };
 
-        const { data: insightData, error: insightError } = await supabase
-          .from("ig_media_insights")
-          .select("media_id,impressions,reach,likes,comments,shares,saved")
-          .in("media_id", media.map(m => m.id));
-        if (insightError) throw insightError;
-
-        const insMap = new Map((insightData ?? []).map((i: InsightRow) => [i.media_id, i]));
-        const byDate: Record<string, DayData> = {};
-        let totalViews = 0, totalReach = 0, totalEngagement = 0;
-
-        for (const m of media) {
-          const date = m.timestamp.slice(0, 10);
-          const ins  = insMap.get(m.id);
-          const vws  = ins?.impressions ?? 0; // kolom impressions sekarang menyimpan views
-          const rch  = ins?.reach       ?? 0;
-          const eng  = (ins?.likes ?? 0) + (ins?.comments ?? 0) + (ins?.shares ?? 0) + (ins?.saved ?? 0);
-          if (!byDate[date]) byDate[date] = { date, impressions: 0, reach: 0, engagement: 0 };
-          byDate[date].impressions += vws;
-          byDate[date].reach       += rch;
-          byDate[date].engagement  += eng;
-          totalViews      += vws;
-          totalReach      += rch;
-          totalEngagement += eng;
+          const ins = insightData ?? [];
+          const noInsights = ins.length === 0 && media.length > 0;
+          return {
+            views:      0,
+            reach:      ins.reduce((s, i) => s + (i.reach ?? 0), 0),
+            engagement: ins.reduce((s, i) => s + (i.likes ?? 0) + (i.comments ?? 0) + (i.shares ?? 0) + (i.saved ?? 0), 0),
+            noInsights,
+          };
         }
 
-        // noInsights: media ada tapi tak satu pun punya insight (kasus cerita kadaluarsa)
-        const noInsights = insightData !== null && insightData.length === 0 && media.length > 0;
-
+        const [curr, prev] = await Promise.all([
+          fetchStoriesPeriod(dateStart, dateStop),
+          fetchStoriesPeriod(prevStartStr, prevStopStr),
+        ]);
+        const growth = (c: number, p: number): number | null =>
+          p === 0 ? null : Math.round(((c - p) / p) * 100);
         return {
-          views:      totalViews,
-          reach:      totalReach,
-          engagement: totalEngagement,
-          noInsights,
-          byDate:     Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date)),
+          ...empty,
+          views: curr.views, reach: curr.reach, engagement: curr.engagement,
+          prevViews: prev.views, prevReach: prev.reach, prevEngagement: prev.engagement,
+          viewsGrowth: growth(curr.views, prev.views),
+          reachGrowth: growth(curr.reach, prev.reach),
+          engagementGrowth: growth(curr.engagement, prev.engagement),
+          noInsights: curr.noInsights,
         };
       }
 
-      const growth = (curr: number, prev: number): number | null => {
-        if (prev === 0) return curr > 0 ? null : null;
-        return Math.round(((curr - prev) / prev) * 100);
-      };
+      // Untuk semua/postingan: gunakan account-level metrics dari Meta API via API route
+      // (metric_type=total_value agar cocok dengan angka di Meta Business Suite)
+      async function fetchAccountPeriod(from: string, to: string) {
+        const params = new URLSearchParams({ igAccountId: accountId, dateStart: from, dateStop: to });
+        const res  = await fetch(`/api/ig-summary?${params}`);
+        if (!res.ok) return { views: 0, reach: 0, engagement: 0, noInsights: false };
+        const json = await res.json() as {
+          views: number; reach: number; totalInteractions: number;
+          likes: number; comments: number; shares: number; saves: number;
+        };
+        return {
+          views:      json.views             ?? 0,
+          reach:      json.reach             ?? 0,
+          engagement: json.totalInteractions ?? 0,
+          noInsights: false,
+        };
+      }
 
       const [curr, prev] = await Promise.all([
-        fetchPeriod(dateStart, dateStop),
-        fetchPeriod(prevStartStr, prevStopStr),
+        fetchAccountPeriod(dateStart, dateStop),
+        fetchAccountPeriod(prevStartStr, prevStopStr),
       ]);
 
+      const growth = (c: number, p: number): number | null =>
+        p === 0 ? null : Math.round(((c - p) / p) * 100);
+
       return {
-        views:            curr.views,
-        reach:            curr.reach,
-        engagement:       curr.engagement,
-        prevViews:        prev.views,
-        prevReach:        prev.reach,
-        prevEngagement:   prev.engagement,
+        ...empty,
+        views: curr.views, reach: curr.reach, engagement: curr.engagement,
+        prevViews: prev.views, prevReach: prev.reach, prevEngagement: prev.engagement,
         viewsGrowth:      growth(curr.views,      prev.views),
         reachGrowth:      growth(curr.reach,      prev.reach),
         engagementGrowth: growth(curr.engagement, prev.engagement),
-        noInsights:       curr.noInsights,
-        byDate:           curr.byDate,
+        noInsights: false,
       };
     },
     { refreshInterval: REVALIDATE },
   );
 }
 
-type IgDayData = { date: string; total: number; organic: number; paid: number };
+type IgDayData = { date: string; total: number; organic: number; paid: number; paidImpressions: number };
 
 export function useIgDailyChart(accountId: string, dateStart: string, dateStop: string) {
   return useSWR<IgDayData[]>(
@@ -734,24 +789,28 @@ export function useIgDailyChart(accountId: string, dateStart: string, dateStop: 
         .order("date", { ascending: true });
       if (acctError) throw acctError;
 
-      // Query 2: paid reach dari Instagram placements di ad_breakdown_platform
+      // Query 2: paid reach + impressions dari Instagram placements di ad_breakdown_platform
       const { data: paidData, error: paidError } = await supabase
         .from("ad_breakdown_platform")
-        .select("date_start,reach")
+        .select("date_start,reach,impressions")
         .eq("publisher_platform", "instagram")
         .gte("date_start", dateStart)
         .lte("date_start", dateStop);
       if (paidError) throw paidError;
 
-      const paidByDate: Record<string, number> = {};
-      for (const row of (paidData ?? []) as { date_start: string; reach: number }[]) {
-        paidByDate[row.date_start] = (paidByDate[row.date_start] ?? 0) + (row.reach ?? 0);
+      const paidByDate: Record<string, { reach: number; impressions: number }> = {};
+      for (const row of (paidData ?? []) as { date_start: string; reach: number; impressions: number }[]) {
+        const d = row.date_start;
+        if (!paidByDate[d]) paidByDate[d] = { reach: 0, impressions: 0 };
+        paidByDate[d].reach       += row.reach       ?? 0;
+        paidByDate[d].impressions += row.impressions ?? 0;
       }
 
       return ((acctData ?? []) as { date: string; reach: number }[]).map(row => {
-        const total = row.reach ?? 0;
-        const paid  = paidByDate[row.date] ?? 0;
-        return { date: row.date, total, paid, organic: Math.max(0, total - paid) };
+        const total           = row.reach ?? 0;
+        const paid            = paidByDate[row.date]?.reach       ?? 0;
+        const paidImpressions = paidByDate[row.date]?.impressions ?? 0;
+        return { date: row.date, total, paid, organic: Math.max(0, total - paid), paidImpressions };
       });
     },
     { refreshInterval: REVALIDATE },
@@ -790,7 +849,7 @@ export function useIgTopMedia(accountId: string, dateStart: string, dateStop: st
 
       return mediaItems
         .map(m => ({ ...m, ...(insightsMap.get(m.id) ?? {}) }) as IgMedia & IgMediaInsight)
-        .sort((a, b) => (b.reach ?? 0) - (a.reach ?? 0))
+        .sort((a, b) => (b.impressions ?? 0) - (a.impressions ?? 0))
         .slice(0, limit);
     },
     { refreshInterval: REVALIDATE },

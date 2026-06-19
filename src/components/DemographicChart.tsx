@@ -19,7 +19,7 @@ export function DemographicChart({ dateStart, dateStop, campaignIds = [], metric
 
   const metricLabel = METRIC_LABEL[metricKey];
 
-  if (isLoading) return <div className="chart-card"><div className="chart-skeleton" style={{ height: 220 }} /></div>;
+  if (isLoading) return <div className="chart-card"><div className="chart-skeleton" style={{ height: 260 }} /></div>;
 
   const getValue = (row: { impressions: number; reach: number; messaging_conversations: number | null }) => {
     if (metricKey === "reach") return row.reach ?? 0;
@@ -44,6 +44,11 @@ export function DemographicChart({ dateStart, dateStop, campaignIds = [], metric
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
 
+  const totalPerempuan = chartData.reduce((s, d) => s + d.perempuan, 0);
+  const totalLaki      = chartData.reduce((s, d) => s + d.laki, 0);
+  const totalLainnya   = chartData.reduce((s, d) => s + d.lainnya, 0);
+  const totalAll       = totalPerempuan + totalLaki + totalLainnya;
+
   if (chartData.length === 0) return (
     <div className="chart-card">
       <h3 className="chart-title">Demografis Usia & Gender — {metricLabel}</h3>
@@ -53,8 +58,18 @@ export function DemographicChart({ dateStart, dateStop, campaignIds = [], metric
 
   return (
     <div className="chart-card">
-      <h3 className="chart-title">Demografis Usia & Gender — {metricLabel}</h3>
-      <ResponsiveContainer width="100%" height={220}>
+      <div style={{ marginBottom: 8 }}>
+        <h3 className="chart-title" style={{ marginBottom: 2 }}>Demografis Usia & Gender — {metricLabel}</h3>
+        <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+          <span>Est. Total: <strong style={{ color: "#1F1F22" }}>{num(totalAll)}</strong></span>
+          <span>·</span>
+          <span style={{ color: "#BB2649" }}>P: <strong>{num(totalPerempuan)}</strong></span>
+          <span>·</span>
+          <span style={{ color: "#2563EB" }}>L: <strong>{num(totalLaki)}</strong></span>
+          {totalLainnya > 0 && <><span>·</span><span style={{ color: "#9B9BA3" }}>Lainnya: <strong>{num(totalLainnya)}</strong></span></>}
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={260}>
         <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis dataKey="age" tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />

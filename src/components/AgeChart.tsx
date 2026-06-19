@@ -18,7 +18,7 @@ export function AgeChart({ dateStart, dateStop, campaignIds = [], metricKey = "i
   const tickColor  = theme === "dark" ? "#9B9BA3" : "#A1A1AA";
   const tooltipBg  = theme === "dark" ? "#1F1F22" : "#FFFFFF";
 
-  if (isLoading) return <div className="chart-card"><div className="chart-skeleton" style={{ height: 220 }} /></div>;
+  if (isLoading) return <div className="chart-card"><div className="chart-skeleton" style={{ height: 260 }} /></div>;
 
   const metricLabel = METRIC_LABEL[metricKey];
 
@@ -40,6 +40,8 @@ export function AgeChart({ dateStart, dateStop, campaignIds = [], metricKey = "i
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
 
+  const totalValue = chartData.reduce((s, d) => s + d.value, 0);
+
   if (chartData.length === 0) return (
     <div className="chart-card">
       <h3 className="chart-title">Distribusi Usia — {metricLabel}</h3>
@@ -49,8 +51,13 @@ export function AgeChart({ dateStart, dateStop, campaignIds = [], metricKey = "i
 
   return (
     <div className="chart-card">
-      <h3 className="chart-title">Distribusi Usia — {metricLabel}</h3>
-      <ResponsiveContainer width="100%" height={220}>
+      <div style={{ marginBottom: 8 }}>
+        <h3 className="chart-title" style={{ marginBottom: 2 }}>Distribusi Usia — {metricLabel}</h3>
+        <div style={{ fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+          Est. Total: <strong style={{ color: "#BB2649" }}>{num(totalValue)}</strong>
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={260}>
         <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis dataKey="age" tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />

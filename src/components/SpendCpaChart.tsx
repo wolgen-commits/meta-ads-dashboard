@@ -17,12 +17,22 @@ export function SpendCpaChart({ dateStart, dateStop, campaignIds = [], adsetIds 
   const tickColor = theme === "dark" ? "#9B9BA3" : "#A1A1AA";
   const tooltipBg = theme === "dark" ? "#1F1F22" : "#FFFFFF";
 
+  const totalSpend         = chartData.reduce((s, d) => s + d.spend, 0);
+  const totalConversations = chartData.reduce((s, d) => s + d.conversations, 0);
+
   if (isLoading) return <div className="chart-skeleton" />;
 
   return (
     <div className="chart-card">
       <div className="chart-header-row">
-        <h3 className="chart-title" style={{ marginBottom: 0 }}>Spend Harian & CPA</h3>
+        <div>
+          <h3 className="chart-title" style={{ marginBottom: 2 }}>Spend Harian & CPA</h3>
+          <div style={{ display: "flex", gap: 12, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+            <span>Total Spend: <strong style={{ color: "#BB2649" }}>{idr(totalSpend)}</strong></span>
+            <span>·</span>
+            <span>Percakapan: <strong style={{ color: "#2563EB" }}>{totalConversations.toLocaleString("id-ID")}</strong></span>
+          </div>
+        </div>
         <span style={{ fontSize: 10, color: tickColor, fontFamily: "DM Sans" }}>CPA = Spend ÷ Percakapan</span>
       </div>
       <ResponsiveContainer width="100%" height={260}>

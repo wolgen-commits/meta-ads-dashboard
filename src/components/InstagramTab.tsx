@@ -39,6 +39,8 @@ function GrowthBadge({ pct }: { pct: number | null | undefined }) {
   );
 }
 
+const IG_CHART_HEIGHT = 300;
+
 type ContentType = "semua" | "postingan" | "cerita";
 
 const CONTENT_TABS: { key: ContentType; label: string }[] = [
@@ -75,10 +77,10 @@ function PopularCard({ media }: { media: IgMedia & Partial<IgMediaInsight> }) {
         </p>
         <p className="ig-card-date">{fmtCardDate(media.timestamp)}</p>
         <div className="ig-card-metrics">
-          <span>👁 {num(media.reach ?? 0)}</span>
-          <span>❤️ {num(media.likes ?? 0)}</span>
-          <span>💬 {num(media.comments ?? 0)}</span>
-          <span>↗ {num(media.shares ?? 0)}</span>
+          <span title="Tayangan">👁 {num((media as IgMediaInsight).impressions ?? 0)}</span>
+          <span title="Jangkauan">👥 {num(media.reach ?? 0)}</span>
+          <span title="Suka">❤️ {num(media.likes ?? 0)}</span>
+          <span title="Bagikan">↗ {num(media.shares ?? 0)}</span>
         </div>
       </div>
     </a>
@@ -119,50 +121,51 @@ export function InstagramTab() {
   return (
     <div className="ig-tab">
 
-      {/* ── Header: account selector + date range ── */}
+      {/* ── Header: lihat lebih banyak + account selector + date range ── */}
       <div className="ig-tab-header">
-        <div className="ig-account-select-wrap">
-          <span className="ig-select-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
-          </span>
-          <select
-            className="ig-account-select"
-            value={currentId}
-            onChange={e => setActiveAccount(e.target.value)}
-          >
-            {accounts.map(a => (
-              <option key={a.id} value={a.id}>
-                @{a.username ?? a.name}
-              </option>
-            ))}
-          </select>
-          <span className="ig-select-arrow">▾</span>
-        </div>
+        <a href={igUrl} target="_blank" rel="noopener noreferrer" className="ig-more-link">
+          Lihat lebih banyak
+        </a>
 
-        <div className="ig-date-picker">
-          <span className="ig-date-icon">📅</span>
-          <input
-            type="date"
-            className="ig-date-input"
-            value={dateStart}
-            max={dateStop}
-            onChange={e => setDateStart(e.target.value)}
-          />
-          <span style={{ color: "var(--gray-400)", fontSize: 13 }}>–</span>
-          <input
-            type="date"
-            className="ig-date-input"
-            value={dateStop}
-            min={dateStart}
-            onChange={e => setDateStop(e.target.value)}
-          />
+        <div className="ig-tab-header-controls">
+          <div className="ig-account-select-wrap">
+            <span className="ig-select-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+            </span>
+            <select
+              className="ig-account-select"
+              value={currentId}
+              onChange={e => setActiveAccount(e.target.value)}
+            >
+              {accounts.filter(a => a.id === "17841457712254566").map(a => (
+                <option key={a.id} value={a.id}>
+                  @{a.username ?? a.name}
+                </option>
+              ))}
+            </select>
+            <span className="ig-select-arrow">▾</span>
+          </div>
+
+          <div className="ig-date-picker">
+            <span className="ig-date-icon">📅</span>
+            <input
+              type="date"
+              className="ig-date-input"
+              value={dateStart}
+              max={dateStop}
+              onChange={e => setDateStart(e.target.value)}
+            />
+            <span style={{ color: "var(--gray-400)", fontSize: 13 }}>–</span>
+            <input
+              type="date"
+              className="ig-date-input"
+              value={dateStop}
+              min={dateStart}
+              onChange={e => setDateStop(e.target.value)}
+            />
+          </div>
         </div>
       </div>
-
-      {/* ── Lihat lebih banyak ── */}
-      <a href={igUrl} target="_blank" rel="noopener noreferrer" className="ig-more-link">
-        Lihat lebih banyak
-      </a>
 
       {/* ── Gambaran umum konten ── */}
       <div className="ig-overview-card">
@@ -235,11 +238,11 @@ export function InstagramTab() {
         <div className="ig-chart-layout">
           <div className="ig-chart-area">
             {loadingChart ? (
-              <div className="chart-skeleton" style={{ height: 200 }} />
+              <div className="chart-skeleton" style={{ height: IG_CHART_HEIGHT }} />
             ) : (dailyChart ?? []).length === 0 ? (
-              <div className="chart-empty" style={{ height: 200 }}>Belum ada data jangkauan untuk periode ini</div>
+              <div className="chart-empty" style={{ height: IG_CHART_HEIGHT }}>Belum ada data jangkauan untuk periode ini</div>
             ) : (
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={IG_CHART_HEIGHT}>
                 <LineChart
                   data={dailyChart ?? []}
                   margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
@@ -270,26 +273,31 @@ export function InstagramTab() {
           </div>
 
           <div className="ig-breakdown-panel">
-            <p className="ig-breakdown-title">Perincian jangkauan</p>
+            <p className="ig-breakdown-title">Perincian tayangan</p>
             <p className="ig-breakdown-period">{fmtPeriod(dateStart, dateStop)}</p>
             {(() => {
-              const totals = (dailyChart ?? []).reduce(
-                (acc, d) => ({ total: acc.total + d.total, organic: acc.organic + d.organic, paid: acc.paid + d.paid }),
-                { total: 0, organic: 0, paid: 0 },
-              );
+              // Total tayangan dari API route (cocok dengan Meta Business Suite)
+              const totalViews = overview?.views ?? 0;
+
+              // Paid impressions dari ad_breakdown_platform; cap agar tidak melebihi total
+              // (ad platform impressions bisa melebihi account views karena berbeda scope)
+              const rawPaid      = (dailyChart ?? []).reduce((s, d) => s + d.paidImpressions, 0);
+              const paidViews    = Math.min(rawPaid, totalViews);
+              const organicViews = Math.max(0, totalViews - paidViews);
+
               return (
                 <div className="ig-breakdown-items">
                   <div className="ig-breakdown-item">
                     <span className="ig-breakdown-label">Total</span>
-                    <span className="ig-breakdown-value">{num(totals.total)}</span>
+                    <span className="ig-breakdown-value">{num(totalViews)}</span>
                   </div>
                   <div className="ig-breakdown-item">
                     <span className="ig-breakdown-label">Dari organik</span>
-                    <span className="ig-breakdown-value">{num(totals.organic)}</span>
+                    <span className="ig-breakdown-value">{num(organicViews)}</span>
                   </div>
                   <div className="ig-breakdown-item">
                     <span className="ig-breakdown-label">Dari iklan</span>
-                    <span className="ig-breakdown-value">{num(totals.paid)}</span>
+                    <span className="ig-breakdown-value">{num(paidViews)}</span>
                   </div>
                 </div>
               );
@@ -301,7 +309,7 @@ export function InstagramTab() {
       {/* ── Konten populer ── */}
       <div className="ig-popular-section">
         <div className="ig-popular-header">
-          <h3 className="ig-popular-title">Konten populer berdasarkan jangkauan</h3>
+          <h3 className="ig-popular-title">Konten populer berdasarkan tayangan</h3>
           <div className="ig-popular-actions">
             <button className="ig-action-btn">Promosikan konten</button>
             <a href={igUrl} target="_blank" rel="noopener noreferrer" className="ig-action-btn">

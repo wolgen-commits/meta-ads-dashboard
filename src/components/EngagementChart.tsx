@@ -53,11 +53,19 @@ export function EngagementChart({ dateStart, dateStop, campaignIds = [], adsetId
     all: d.reactions + d.comments + d.shares + d.saves,
   }));
 
+  const activeMetricField = active === "all" ? "all" : active as "reactions" | "comments" | "shares" | "saves";
+  const totalActive = chartData.reduce((s, d) => s + (d[activeMetricField] ?? 0), 0);
+
   return (
     <div className="chart-card">
       <div className="chart-header-row">
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <h3 className="chart-title" style={{ marginBottom: 0 }}>Engagement</h3>
+          <div>
+            <h3 className="chart-title" style={{ marginBottom: 2 }}>Engagement</h3>
+            <div style={{ fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+              Total {metric.label}: <strong style={{ color: metric.color }}>{totalActive.toLocaleString("id-ID")}</strong>
+            </div>
+          </div>
           <select
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
@@ -94,9 +102,9 @@ export function EngagementChart({ dateStart, dateStop, campaignIds = [], adsetId
         </div>
       </div>
       {isLoading ? (
-        <div className="chart-skeleton" style={{ height: 180, marginTop: 12 }} />
+        <div className="chart-skeleton" style={{ height: 260, marginTop: 12 }} />
       ) : (
-        <ResponsiveContainer width="100%" height={180}>
+        <ResponsiveContainer width="100%" height={260}>
           <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               {active === "all" ? (

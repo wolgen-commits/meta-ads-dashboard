@@ -20,7 +20,7 @@ export function RegionChart({ dateStart, dateStop, campaignIds = [], metricKey =
 
   const metricLabel = METRIC_LABEL[metricKey];
 
-  if (isLoading) return <div className="chart-card"><div className="chart-skeleton" style={{ height: 220 }} /></div>;
+  if (isLoading) return <div className="chart-card"><div className="chart-skeleton" style={{ height: 260 }} /></div>;
 
   const byRegion = (data ?? []).reduce<Record<string, { region: string; value: number }>>((acc, row) => {
     const region = row.region ?? "Unknown";
@@ -34,9 +34,13 @@ export function RegionChart({ dateStart, dateStop, campaignIds = [], metricKey =
     return acc;
   }, {});
 
-  const chartData = Object.values(byRegion)
+  const sortedRegionData = Object.values(byRegion)
     .sort((a, b) => b.value - a.value)
-    .slice(0, 10);
+    .filter((row) => row.value > 0);
+
+  const chartData   = sortedRegionData.slice(0, 10);
+  const totalAll    = sortedRegionData.reduce((s, d) => s + d.value, 0);
+  const regionCount = sortedRegionData.length;
 
   if (chartData.length === 0) return (
     <div className="chart-card">
@@ -47,12 +51,25 @@ export function RegionChart({ dateStart, dateStop, campaignIds = [], metricKey =
 
   return (
     <div className="chart-card">
-      <h3 className="chart-title">Top 10 Wilayah — {metricLabel}</h3>
-      <ResponsiveContainer width="100%" height={220}>
+      <div style={{ marginBottom: 8 }}>
+        <h3 className="chart-title" style={{ marginBottom: 2 }}>Top 10 Wilayah — {metricLabel}</h3>
+        <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+          <span>Est. Total: <strong style={{ color: "#BB2649" }}>{num(totalAll)}</strong></span>
+          <span>·</span>
+          <span>{regionCount} wilayah</span>
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={260}>
         <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 40, left: 4, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
           <XAxis type="number" tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} />
-          <YAxis type="category" dataKey="region" tick={{ fontSize: 9, fill: tickColor, fontFamily: "DM Sans" }} width={80} />
+          <YAxis
+            type="category"
+            dataKey="region"
+            interval={0}
+            tick={{ fontSize: 9, fill: tickColor, fontFamily: "DM Sans" }}
+            width={80}
+          />
           <Tooltip
             formatter={(v: unknown) => [num(Number(v ?? 0)), metricLabel]}
             contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}

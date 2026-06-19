@@ -65,12 +65,20 @@ export function PlatformMediaChart({ dateStart, dateStop, campaignIds = [], metr
     {},
   );
 
-  const chartData = Object.values(aggregated).sort((a, b) => b.value - a.value);
+  const chartData  = Object.values(aggregated).sort((a, b) => b.value - a.value);
+  const totalValue = chartData.reduce((s, d) => s + d.value, 0);
+  const totalSpend = chartData.reduce((s, d) => s + d.spend, 0);
 
   return (
     <div className="chart-card">
       <div className="chart-header-row">
-        <h3 className="chart-title" style={{ marginBottom: 0 }}>Platform & Media</h3>
+        <div>
+          <h3 className="chart-title" style={{ marginBottom: 2 }}>Platform & Media</h3>
+          <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+            <span>Est. Total {metricLabel}: <strong style={{ color: "#BB2649" }}>{num(totalValue)}</strong></span>
+            {totalSpend > 0 && <><span>·</span><span>Spend: <strong>{(totalSpend / 1_000_000).toFixed(1)}jt</strong></span></>}
+          </div>
+        </div>
         <div className="eng-tabs">
           <button
             className={`eng-tab${active === "platform" ? " active" : ""}`}
@@ -90,11 +98,11 @@ export function PlatformMediaChart({ dateStart, dateStop, campaignIds = [], metr
       </div>
 
       {isLoading ? (
-        <div className="chart-skeleton" style={{ height: 180, marginTop: 12 }} />
+        <div className="chart-skeleton" style={{ height: 260, marginTop: 12 }} />
       ) : chartData.length === 0 ? (
         <div className="chart-empty">Belum ada data</div>
       ) : (
-        <ResponsiveContainer width="100%" height={180}>
+        <ResponsiveContainer width="100%" height={260}>
           <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
             <XAxis
