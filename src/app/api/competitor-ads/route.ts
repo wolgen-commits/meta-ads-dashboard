@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-const AGENT_API = process.env.AGENT_API_URL || "http://localhost:8000";
+const AGENT_API = (process.env.AGENT_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
 // POST /api/competitor-ads → trigger scraping agent
 export async function POST(req: NextRequest) {

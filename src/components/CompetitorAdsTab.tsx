@@ -232,89 +232,173 @@ function AdTableRow({ ad, onDetail }: { ad: CompetitorAd; onDetail: (ad: Competi
 
 function AdDetailModal({ ad, onClose }: { ad: CompetitorAd; onClose: () => void }) {
   const objColor = OBJECTIVE_COLORS[ad.inferred_objective ?? ""] ?? "#52525A";
+  const confStyle = CONFIDENCE_STYLE[ad.objective_confidence ?? ""] ?? { bg: "#F2F2F7", color: "#71717A" };
   const score = ad.ad_strength_score ?? 0;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 20 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>{ad.page_name || ad.competitor_name}</div>
-            <div style={{ fontSize: 12, color: "var(--gray-500)", marginTop: 2 }}>{ad.competitor_name}</div>
+      <div
+        className="modal-box"
+        style={{ width: "70vw", maxWidth: "70vw", maxHeight: "85vh", display: "flex", flexDirection: "column", padding: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* ── Header (sticky) ── */}
+        <div style={{ padding: "20px 28px 16px", borderBottom: "1px solid var(--gray-200)", display: "flex", alignItems: "flex-start", gap: 12, flexShrink: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 17, wordBreak: "break-word" }}>{ad.page_name || ad.competitor_name}</div>
+            <div style={{ fontSize: 12, color: "var(--gray-500)", marginTop: 3 }}>Kompetitor: {ad.competitor_name}</div>
           </div>
-          {ad.inferred_objective && (
-            <span className="ca-objective-badge" style={{ background: objColor + "22", color: objColor, flexShrink: 0 }}>
-              {ad.inferred_objective}
-            </span>
-          )}
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--gray-400)", padding: "0 4px", marginLeft: 4 }}>×</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {ad.inferred_objective && (
+              <span className="ca-objective-badge" style={{ background: objColor + "22", color: objColor }}>
+                {ad.inferred_objective}
+              </span>
+            )}
+            {ad.objective_confidence && (
+              <span className="ca-confidence-pill" style={{ background: confStyle.bg, color: confStyle.color }}>
+                {ad.objective_confidence}
+              </span>
+            )}
+            {ad.country && (
+              <span style={{ fontSize: 11, background: "var(--gray-100)", color: "var(--gray-500)", borderRadius: 4, padding: "3px 8px" }}>
+                {ad.country}
+              </span>
+            )}
+            <button
+              onClick={onClose}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--gray-400)", padding: "0 2px", lineHeight: 1, marginLeft: 4 }}
+            >
+              ×
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {ad.ad_copy && (
-            <div>
-              <div className="ca-insight-label">Teks Iklan</div>
-              <div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 4, color: "var(--gray-800)" }}>{ad.ad_copy}</div>
-            </div>
-          )}
+        {/* ── Body (scrollable) ── */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "24px 28px" }}>
+          {/* Dua kolom utama */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, alignItems: "start" }}>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div><div className="ca-insight-label">CTA</div><div style={{ fontSize: 13, marginTop: 3 }}>{ad.cta || "—"}</div></div>
-            <div><div className="ca-insight-label">Media</div><div style={{ fontSize: 13, marginTop: 3 }}>{ad.media_type || "—"}</div></div>
-            <div><div className="ca-insight-label">Platform</div><div style={{ fontSize: 13, marginTop: 3 }}>{(ad.platforms ?? []).join(", ") || "—"}</div></div>
-            <div><div className="ca-insight-label">Negara</div><div style={{ fontSize: 13, marginTop: 3 }}>{ad.country || "—"}</div></div>
-            <div><div className="ca-insight-label">Mulai Tayang</div><div style={{ fontSize: 13, marginTop: 3 }}>{ad.started_running || "—"}</div></div>
-            <div>
-              <div className="ca-insight-label">Kekuatan Iklan</div>
-              <div className="ca-score-bar-wrap" style={{ marginTop: 5 }}>
-                <div className="ca-score-bar" style={{ flex: 1 }}>
-                  <div className="ca-score-fill" style={{ width: `${score * 10}%`, background: scoreColor(score) }} />
+            {/* KOLOM KIRI — Data iklan */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <div>
+                <div className="ca-insight-label" style={{ marginBottom: 6 }}>Teks Iklan</div>
+                <div style={{ fontSize: 13, lineHeight: 1.7, color: "var(--gray-800)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                  {ad.ad_copy || <span style={{ color: "var(--gray-400)", fontStyle: "italic" }}>Tidak ada teks iklan</span>}
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: scoreColor(score) }}>{score}/10</span>
               </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div>
+                  <div className="ca-insight-label">CTA</div>
+                  <div style={{ fontSize: 13, marginTop: 4, fontWeight: 600 }}>{ad.cta || "—"}</div>
+                </div>
+                <div>
+                  <div className="ca-insight-label">Tipe Media</div>
+                  <div style={{ fontSize: 13, marginTop: 4 }}>{ad.media_type || "—"}</div>
+                </div>
+                <div>
+                  <div className="ca-insight-label">Platform Tayang</div>
+                  <div style={{ fontSize: 13, marginTop: 4, wordBreak: "break-word" }}>{(ad.platforms ?? []).join(", ") || "—"}</div>
+                </div>
+                <div>
+                  <div className="ca-insight-label">Mulai Tayang</div>
+                  <div style={{ fontSize: 13, marginTop: 4 }}>{ad.started_running || "—"}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="ca-insight-label" style={{ marginBottom: 8 }}>Kekuatan Iklan</div>
+                <div className="ca-score-bar-wrap">
+                  <div className="ca-score-bar" style={{ flex: 1, height: 10 }}>
+                    <div className="ca-score-fill" style={{ width: `${score * 10}%`, background: scoreColor(score) }} />
+                  </div>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: scoreColor(score), minWidth: 40 }}>{score}/10</span>
+                </div>
+              </div>
+
+              {ad.snapshot_url && (
+                <a href={ad.snapshot_url} target="_blank" rel="noopener noreferrer" className="al-card-link" style={{ fontSize: 12 }}>
+                  Lihat iklan asli di Meta Ad Library ↗
+                </a>
+              )}
+            </div>
+
+            {/* KOLOM KANAN — Analisis AI */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--magenta-600)", marginBottom: 2 }}>
+                Analisis AI
+              </div>
+
+              {ad.creative_strategy && (
+                <div>
+                  <div className="ca-insight-label">Strategi Kreatif</div>
+                  <div style={{ marginTop: 5 }}>
+                    <span style={{ fontSize: 12, background: "var(--warning-100)", color: "var(--warning-600)", borderRadius: 5, padding: "3px 10px", fontWeight: 700 }}>
+                      {ad.creative_strategy}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {ad.target_audience_guess && (
+                <div>
+                  <div className="ca-insight-label">Target Audiens (Perkiraan AI)</div>
+                  <div style={{ fontSize: 13, marginTop: 4, lineHeight: 1.6, color: "var(--gray-700)", wordBreak: "break-word" }}>
+                    {ad.target_audience_guess}
+                  </div>
+                </div>
+              )}
+
+              {ad.objective_reasoning && (
+                <div>
+                  <div className="ca-insight-label">Alasan Objective</div>
+                  <div style={{ fontSize: 12, marginTop: 4, lineHeight: 1.6, color: "var(--gray-600)", wordBreak: "break-word" }}>
+                    {ad.objective_reasoning}
+                  </div>
+                </div>
+              )}
+
+              {ad.key_messages && ad.key_messages.length > 0 && (
+                <div>
+                  <div className="ca-insight-label">Pesan Kunci</div>
+                  <ul style={{ margin: "6px 0 0 18px", padding: 0, fontSize: 12, color: "var(--gray-700)", lineHeight: 1.7 }}>
+                    {ad.key_messages.map((m, i) => (
+                      <li key={i} style={{ wordBreak: "break-word" }}>{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {ad.competitive_insight && (
+                <div className="ca-insight-block">
+                  <div className="ca-insight-label">Insight Kompetitif</div>
+                  <div style={{ fontSize: 12, marginTop: 5, lineHeight: 1.6, color: "var(--gray-700)", wordBreak: "break-word" }}>
+                    {ad.competitive_insight}
+                  </div>
+                </div>
+              )}
+
+              {ad.suggested_counter_strategy && (
+                <div className="ca-insight-block" style={{ background: "var(--success-50)", borderColor: "var(--success-100)" }}>
+                  <div className="ca-insight-label" style={{ color: "var(--success-600)" }}>Strategi Counter yang Disarankan</div>
+                  <div style={{ fontSize: 12, marginTop: 5, lineHeight: 1.6, color: "var(--gray-700)", wordBreak: "break-word" }}>
+                    {ad.suggested_counter_strategy}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+        </div>
 
-          <div style={{ height: 1, background: "var(--gray-200)" }} />
-
-          {ad.objective_reasoning && (
-            <div>
-              <div className="ca-insight-label">Alasan Objective</div>
-              <div style={{ fontSize: 12, lineHeight: 1.5, marginTop: 3, color: "var(--gray-700)" }}>{ad.objective_reasoning}</div>
-            </div>
-          )}
-          {ad.creative_strategy && (
-            <div><div className="ca-insight-label">Strategi Kreatif</div><div style={{ fontSize: 13, marginTop: 3 }}>{ad.creative_strategy}</div></div>
-          )}
-          {ad.target_audience_guess && (
-            <div><div className="ca-insight-label">Target Audiens (AI)</div><div style={{ fontSize: 12, marginTop: 3, lineHeight: 1.5, color: "var(--gray-700)" }}>{ad.target_audience_guess}</div></div>
-          )}
-          {ad.key_messages && ad.key_messages.length > 0 && (
-            <div>
-              <div className="ca-insight-label">Pesan Kunci</div>
-              <ul style={{ margin: "4px 0 0 16px", padding: 0, fontSize: 12, color: "var(--gray-700)", lineHeight: 1.6 }}>
-                {ad.key_messages.map((m, i) => <li key={i}>{m}</li>)}
-              </ul>
-            </div>
-          )}
-          {ad.competitive_insight && (
-            <div className="ca-insight-block">
-              <div className="ca-insight-label">Insight Kompetitif</div>
-              <div style={{ fontSize: 12, marginTop: 3, lineHeight: 1.5, color: "var(--gray-700)" }}>{ad.competitive_insight}</div>
-            </div>
-          )}
-          {ad.suggested_counter_strategy && (
-            <div className="ca-insight-block" style={{ background: "var(--success-50)" }}>
-              <div className="ca-insight-label" style={{ color: "var(--success-600)" }}>Strategi Counter yang Disarankan</div>
-              <div style={{ fontSize: 12, marginTop: 3, lineHeight: 1.5, color: "var(--gray-700)" }}>{ad.suggested_counter_strategy}</div>
-            </div>
-          )}
-
-          {ad.snapshot_url && (
-            <a href={ad.snapshot_url} target="_blank" rel="noopener noreferrer" className="al-card-link" style={{ fontSize: 12, alignSelf: "flex-start", marginTop: 4 }}>
-              Lihat iklan di Meta Ad Library ↗
-            </a>
-          )}
+        {/* ── Footer (sticky) ── */}
+        <div style={{ padding: "14px 28px", borderTop: "1px solid var(--gray-200)", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+          <button
+            onClick={onClose}
+            className="al-search-btn"
+            style={{ padding: "8px 24px", fontSize: 13 }}
+          >
+            Tutup
+          </button>
         </div>
       </div>
     </div>
@@ -485,19 +569,57 @@ export function CompetitorAdsTab() {
           style={{ marginBottom: 20 }}
         >
           {jobStatus.status === "running" && (
-            <>
-              <div className="ca-job-spinner" />
-              <span>
-                Scraping iklan <strong>{lastScrapedCompetitor}</strong>... Analisis AI aktif, mohon tunggu.
-              </span>
-            </>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <div className="ca-job-spinner" />
+                <span style={{ fontWeight: 700 }}>
+                  Sedang scraping iklan &ldquo;{lastScrapedCompetitor}&rdquo;
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--magenta-700)", marginBottom: 8 }}>
+                {jobStatus.progress?.message ?? "Mempersiapkan agent..."}
+              </div>
+              {(jobStatus.progress?.ads_found ?? 0) > 0 && (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4, color: "var(--magenta-700)" }}>
+                    <span>
+                      {jobStatus.progress?.step === "saving"
+                        ? "Menyimpan ke database"
+                        : "Analisis AI"}
+                    </span>
+                    <span style={{ fontWeight: 700 }}>
+                      {jobStatus.progress?.ads_analyzed ?? 0} / {jobStatus.progress?.ads_found} iklan
+                    </span>
+                  </div>
+                  <div className="ca-score-bar" style={{ height: 8 }}>
+                    <div
+                      className="ca-score-fill"
+                      style={{
+                        width: `${Math.round(((jobStatus.progress?.ads_analyzed ?? 0) / (jobStatus.progress?.ads_found ?? 1)) * 100)}%`,
+                        background: "var(--magenta-600)",
+                      }}
+                    />
+                  </div>
+                  {jobStatus.progress?.current_page && (
+                    <div style={{ fontSize: 11, marginTop: 5, color: "var(--magenta-700)", opacity: 0.8 }}>
+                      Halaman: {jobStatus.progress.current_page}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           {jobStatus.status === "done" && (
             <>
-              <span>
-                Selesai! <strong>{jobStatus.summary?.total_analyzed ?? jobStatus.summary?.total_ads_scraped ?? "?"}</strong> iklan ditemukan &amp; dianalisis.
-              </span>
-              <button className="ca-job-action-btn" onClick={handleViewResults} style={{ marginLeft: "auto" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                  ✓ Scraping selesai!
+                </div>
+                <div style={{ fontSize: 12 }}>
+                  <strong>{jobStatus.summary?.total_analyzed ?? 0}</strong> iklan &ldquo;{lastScrapedCompetitor}&rdquo; berhasil dianalisis oleh AI dan disimpan ke database.
+                </div>
+              </div>
+              <button className="ca-job-action-btn" onClick={handleViewResults}>
                 Lihat Hasil
               </button>
             </>

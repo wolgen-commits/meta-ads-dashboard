@@ -140,9 +140,18 @@ export interface CompetitorAd {
   analyzed_at: string | null;
 }
 
+export interface JobProgress {
+  step: "starting" | "opening" | "analyzing" | "saving" | "done";
+  message: string;
+  ads_found?: number;
+  ads_analyzed?: number;
+  current_page?: string;
+}
+
 export interface JobStatusResponse {
   status: "running" | "done" | "error";
   competitor?: string;
+  progress?: JobProgress;
   summary?: { total_ads_scraped: number; total_analyzed: number; completed_at: string };
   error?: string;
 }

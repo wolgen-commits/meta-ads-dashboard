@@ -1,7 +1,10 @@
 import useSWR from "swr";
 import { useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import type { CompetitorAd, CompetitorAdsSummary, JobStatusResponse } from "@/types/database";
+import type { CompetitorAd, CompetitorAdsSummary, JobStatusResponse, JobProgress } from "@/types/database";
+
+// re-export for component use
+export type { JobProgress };
 
 export function useCompetitorAdsList(
   competitor?: string,
