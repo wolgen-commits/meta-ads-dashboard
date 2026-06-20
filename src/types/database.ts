@@ -107,6 +107,7 @@ export type Database = {
       engagement_metrics: { Row: EngagementMetric; Insert: EngagementMetric; Update: Partial<EngagementMetric> };
       audience_insights:  { Row: AudienceInsight;  Insert: AudienceInsight;  Update: Partial<AudienceInsight> };
       meta_sync_log:      { Row: SyncLog;           Insert: SyncLog;          Update: Partial<SyncLog> };
+      competitor_ads:     { Row: CompetitorAd;     Insert: Omit<CompetitorAd, "id">; Update: Partial<CompetitorAd> };
     };
     Views: {
       v_adperf_daily:          { Row: CampaignDailySummary };
@@ -114,3 +115,42 @@ export type Database = {
     };
   };
 };
+
+export interface CompetitorAd {
+  id: string;
+  competitor_name: string;
+  page_name: string | null;
+  ad_copy: string | null;
+  cta: string | null;
+  platforms: string[] | null;
+  media_type: string | null;
+  started_running: string | null;
+  country: string | null;
+  snapshot_url: string | null;
+  scraped_at: string;
+  inferred_objective: string | null;
+  objective_confidence: string | null;
+  objective_reasoning: string | null;
+  creative_strategy: string | null;
+  target_audience_guess: string | null;
+  key_messages: string[] | null;
+  ad_strength_score: number | null;
+  competitive_insight: string | null;
+  suggested_counter_strategy: string | null;
+  analyzed_at: string | null;
+}
+
+export interface JobStatusResponse {
+  status: "running" | "done" | "error";
+  competitor?: string;
+  summary?: { total_ads_scraped: number; total_analyzed: number; completed_at: string };
+  error?: string;
+}
+
+export interface CompetitorAdsSummary {
+  total_ads: number;
+  objectives_distribution: Record<string, number>;
+  creative_strategies: Record<string, number>;
+  ads_per_competitor: Record<string, number>;
+  average_strength_score: number;
+}

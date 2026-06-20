@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx supabase *)",
+      "Bash(META_ACCESS_TOKEN=\"EAAWIwjygPbsBRkZCEJ4YwhELo8eXCGEHRDhbRgqLpAKnyY8FZBZBSEwisEgDLvWNhqG7Kxj4ZC6S1zE7fpf9kD9ZCZCKER85ZCZCXkXoZC9HykMNAahk1bAzBSRXpJM8dCZC1aMuQ39O4Pvq4UReZCL140By2mlm9toOeLuPvEVNbxCZAfagiC9Ew6CajUhuqrVD4VZA8lwZDZD\" NEXT_PUBLIC_SUPABASE_URL=\"https://visicwecchgxonxnwmwd.supabase.co\" SUPABASE_SERVICE_ROLE_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpc2ljd2VjY2hneG9ueG53bXdkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEzNTk4NiwiZXhwIjoyMDk2NzExOTg2fQ.xBjWKdK-EueJTv4AU-SBptVR6b7LpVcRsjlY5xG-fNU\" node scripts/backfill-ig-media-insights.mjs)",
+      "Bash(node --input-type=module)",
+      "Bash(npx next *)",
+      "Bash(curl -s http://localhost:3333/)",
+      "Bash(curl -s \"http://localhost:3000/api/ig-summary?igAccountId=17841457712254566&dateStart=2026-05-20&dateStop=2026-06-18\")",
+      "Bash(curl -v \"http://localhost:3000/api/ig-summary?igAccountId=17841457712254566&dateStart=2026-05-20&dateStop=2026-06-18\")",
+      "Bash(curl -s --max-time 30 \"http://localhost:3000/api/ig-summary?igAccountId=17841457712254566&dateStart=2026-06-12&dateStop=2026-06-18\")",
+      "Bash(curl -s --max-time 35 \"http://localhost:3000/api/ig-summary?igAccountId=17841457712254566&dateStart=2026-05-21&dateStop=2026-06-19\")",
+      "Bash(git commit -m ' *)",
+      "Bash(mkdir -p \"d:/meta-ads-dashboard/src/app/api/competitor-ads/status/[jobId]\")"
+    ],
+    "additionalDirectories": [
+      "d:\\meta-ads-dashboard\\src\\app\\api\\competitor-ads\\status"
+    ]
+  }
+}
