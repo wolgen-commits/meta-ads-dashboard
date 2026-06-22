@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   PieChart, Pie, Cell, Tooltip as ReTooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -188,6 +188,7 @@ function AdTableRow({ ad, onDetail }: { ad: CompetitorAd; onDetail: (ad: Competi
   return (
     <tr onClick={() => onDetail(ad)} style={{ cursor: "pointer" }}>
       <td><strong style={{ fontSize: 12 }}>{ad.competitor_name}</strong></td>
+      <td><span style={{ fontSize: 12 }}>{ad.page_name || "—"}</span></td>
       <td style={{ maxWidth: 220 }}>
         <span style={{ fontSize: 12, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {ad.ad_copy || "—"}
@@ -223,6 +224,7 @@ function AdTableRow({ ad, onDetail }: { ad: CompetitorAd; onDetail: (ad: Competi
           </span>
         )}
       </td>
+      <td><span style={{ fontSize: 11, color: "var(--gray-500)" }}>{ad.started_running || "—"}</span></td>
       <td><span style={{ fontSize: 11, color: "var(--gray-500)" }}>{ad.scraped_at ? ad.scraped_at.slice(0, 10) : "—"}</span></td>
     </tr>
   );
@@ -431,12 +433,52 @@ export function CompetitorAdsTab() {
   // Modal
   const [modalAd, setModalAd] = useState<CompetitorAd | null>(null);
 
-  const { data: ads, isLoading: adsLoading } = useCompetitorAdsList(
+  // Sort
+  type SortKey = "competitor_name" | "page_name" | "ad_copy" | "cta" | "inferred_objective" | "objective_confidence" | "ad_strength_score" | "creative_strategy" | "started_running" | "scraped_at";
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col) return <span style={{ opacity: 0.3, marginLeft: 4, fontSize: 10 }}>⇅</span>;
+    return <span style={{ marginLeft: 4, fontSize: 10, color: "var(--magenta-600)" }}>{sortDir === "asc" ? "↑" : "↓"}</span>;
+  }
+
+  function ThSort({ col, children }: { col: SortKey; children: React.ReactNode }) {
+    return (
+      <th
+        onClick={() => handleSort(col)}
+        style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+      >
+        {children}<SortIcon col={col} />
+      </th>
+    );
+  }
+
+  const { data: rawAds, isLoading: adsLoading } = useCompetitorAdsList(
     filterCompetitor || undefined,
     filterObjective  || undefined,
     filterDateStart  || undefined,
     filterDateStop   || undefined,
   );
+  const ads = useMemo(() => {
+    if (!rawAds || !sortKey) return rawAds;
+    return [...rawAds].sort((a, b) => {
+      const av = a[sortKey] ?? "";
+      const bv = b[sortKey] ?? "";
+      const cmp = String(av).localeCompare(String(bv), "id", { numeric: true, sensitivity: "base" });
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [rawAds, sortKey, sortDir]);
+
   const { data: summary } = useCompetitorAdsSummary(filterCompetitor || undefined);
   const { data: jobStatus } = useJobStatus(activeJobId);
   const { data: competitorList } = useCompetitorList();
@@ -809,14 +851,16 @@ export function CompetitorAdsTab() {
           <table className="db-table">
             <thead>
               <tr>
-                <th>Kompetitor</th>
-                <th>Teks Iklan</th>
-                <th>CTA</th>
-                <th>Objective</th>
-                <th>Confidence</th>
-                <th>Score</th>
-                <th>Strategi</th>
-                <th>Tanggal</th>
+                <ThSort col="competitor_name">Kompetitor</ThSort>
+                <ThSort col="page_name">Nama Pengiklan</ThSort>
+                <ThSort col="ad_copy">Teks Iklan</ThSort>
+                <ThSort col="cta">CTA</ThSort>
+                <ThSort col="inferred_objective">Objective</ThSort>
+                <ThSort col="objective_confidence">Confidence</ThSort>
+                <ThSort col="ad_strength_score">Score</ThSort>
+                <ThSort col="creative_strategy">Strategi</ThSort>
+                <ThSort col="started_running">Mulai Tayang</ThSort>
+                <ThSort col="scraped_at">Tgl Scraping</ThSort>
               </tr>
             </thead>
             <tbody>
