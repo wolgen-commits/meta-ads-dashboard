@@ -40,9 +40,9 @@ export async function GET(req: NextRequest) {
     cursor.setDate(cursor.getDate() + 1);
   }
 
-  const metrics = "views,reach,total_interactions,likes,comments,shares,saves";
+  const metrics = "impressions,reach,total_interactions,likes,comments,shares,saves";
   const totals: Record<string, number> = {
-    views: 0, reach: 0, total_interactions: 0,
+    impressions: 0, reach: 0, total_interactions: 0,
     likes: 0, comments: 0, shares: 0, saves: 0,
   };
 
@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
     };
 
     if (json.error) {
+      console.error("[ig-summary] Meta API error:", json.error.message);
       return NextResponse.json({ error: json.error.message }, { status: 502 });
     }
 
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    views:             totals.views,
+    views:             totals.impressions,
     reach:             totals.reach,
     totalInteractions: totals.total_interactions,
     likes:             totals.likes,
