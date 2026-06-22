@@ -23,8 +23,8 @@ export function useCompetitorAdsList(
         .limit(limit);
       if (competitor) query = query.eq("competitor_name", competitor);
       if (objective)  query = query.eq("inferred_objective", objective);
-      if (dateStart)  query = query.gte("scraped_at", `${dateStart}T00:00:00`);
-      if (dateStop)   query = query.lte("scraped_at", `${dateStop}T23:59:59`);
+      if (dateStart)  query = query.gte("started_running_date", dateStart);
+      if (dateStop)   query = query.lte("started_running_date", dateStop);
       const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as CompetitorAd[];

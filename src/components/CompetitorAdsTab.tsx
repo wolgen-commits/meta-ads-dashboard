@@ -742,7 +742,7 @@ export function CompetitorAdsTab() {
           </select>
         </div>
         <div className="filter-group">
-          <label className="filter-label">Tanggal Scraping</label>
+          <label className="filter-label">Iklan Mulai Tayang</label>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <input
               type="date"
