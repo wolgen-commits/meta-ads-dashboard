@@ -176,7 +176,6 @@ export function InstagramTab() {
   const [activeAccount, setActiveAccount] = useState<string | null>(null);
   const [contentTab, setContentTab] = useState<ContentType>("semua");
   const [selectedMedia, setSelectedMedia] = useState<(IgMedia & Partial<IgMediaInsight>) | null>(null);
-  const [chartView, setChartView] = useState<"organik" | "follow_type">("organik");
 
   const { data: accounts, isLoading: loadingAccounts } = useIgAccounts();
   const currentId      = activeAccount ?? accounts?.[0]?.id ?? "";
@@ -326,27 +325,10 @@ export function InstagramTab() {
           </p>
         )}
 
-        {/* Toggle view */}
-        <div className="ig-chart-toggle">
-          <button
-            className={`ig-chart-toggle-btn${chartView === "organik" ? " active" : ""}`}
-            onClick={() => setChartView("organik")}
-          >
-            Organik &amp; Iklan
-          </button>
-          <button
-            className={`ig-chart-toggle-btn${chartView === "follow_type" ? " active" : ""}`}
-            onClick={() => setChartView("follow_type")}
-          >
-            Follower &amp; Non-Follower
-          </button>
-        </div>
-
         {/* Chart + Breakdown panel */}
         <div className="ig-chart-layout">
           <div className="ig-chart-area">
-            {chartView === "organik" ? (
-              loadingChart ? (
+            {loadingChart ? (
                 <div className="chart-skeleton" style={{ height: IG_CHART_HEIGHT }} />
               ) : (dailyChart ?? []).length === 0 ? (
                 <div className="chart-empty" style={{ height: IG_CHART_HEIGHT }}>Belum ada data tayangan untuk periode ini</div>
@@ -367,98 +349,34 @@ export function InstagramTab() {
                     <Line type="monotone" dataKey="paid"    name="Dari iklan"    stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} strokeDasharray="2 2" />
                   </LineChart>
                 </ResponsiveContainer>
-              )
-            ) : (() => {
-              const followData = (insightsTrend ?? []).map(d => ({
-                date: d.date,
-                followers: d.reach_followers ?? 0,
-                nonFollowers: d.reach_non_followers ?? 0,
-              }));
-              const hasFollowData = followData.some(d => d.followers > 0 || d.nonFollowers > 0);
-              return loadingInsights ? (
-                <div className="chart-skeleton" style={{ height: IG_CHART_HEIGHT }} />
-              ) : !hasFollowData ? (
-                <div className="chart-empty" style={{ height: IG_CHART_HEIGHT }}>Data akan tersedia setelah sync berikutnya</div>
-              ) : (
-                <ResponsiveContainer width="100%" height={IG_CHART_HEIGHT}>
-                  <AreaChart data={followData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="ft-g-followers" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00C6A7" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#00C6A7" stopOpacity={0.01} />
-                      </linearGradient>
-                      <linearGradient id="ft-g-nonfollowers" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#BB2649" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#BB2649" stopOpacity={0.01} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
-                    <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={42} />
-                    <Tooltip
-                      labelFormatter={fmtAxisDate}
-                      formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
-                      contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 10, fontFamily: "DM Sans" }} />
-                    <Area type="monotone" dataKey="followers"    name="Pengikut"     stroke="#00C6A7" fill="url(#ft-g-followers)"    strokeWidth={2} />
-                    <Area type="monotone" dataKey="nonFollowers" name="Non-pengikut" stroke="#BB2649" fill="url(#ft-g-nonfollowers)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              );
-            })()}
+              )}
           </div>
 
           <div className="ig-breakdown-panel">
-            {chartView === "organik" ? (
-              <>
-                <p className="ig-breakdown-title">Perincian tayangan</p>
-                <p className="ig-breakdown-period">{fmtPeriod(dateStart, dateStop)}</p>
-                {(() => {
-                  const totalViews   = overview?.views ?? 0;
-                  const rawPaid      = (dailyChart ?? []).reduce((s, d) => s + d.paidImpressions, 0);
-                  const paidViews    = Math.min(rawPaid, totalViews);
-                  const organicViews = Math.max(0, totalViews - paidViews);
-                  return (
-                    <div className="ig-breakdown-items">
-                      <div className="ig-breakdown-item">
-                        <span className="ig-breakdown-label">Total</span>
-                        <span className="ig-breakdown-value">{num(totalViews)}</span>
-                      </div>
-                      <div className="ig-breakdown-item">
-                        <span className="ig-breakdown-label">Dari organik</span>
-                        <span className="ig-breakdown-value">{num(organicViews)}</span>
-                      </div>
-                      <div className="ig-breakdown-item">
-                        <span className="ig-breakdown-label">Dari iklan</span>
-                        <span className="ig-breakdown-value">{num(paidViews)}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </>
-            ) : (
-              <>
-                <p className="ig-breakdown-title">Tayangan per tipe</p>
-                <p className="ig-breakdown-period">{fmtPeriod(dateStart, dateStop)}</p>
-                {(() => {
-                  const totalF   = (insightsTrend ?? []).reduce((s, d) => s + (d.reach_followers    ?? 0), 0);
-                  const totalNF  = (insightsTrend ?? []).reduce((s, d) => s + (d.reach_non_followers ?? 0), 0);
-                  return (
-                    <div className="ig-breakdown-items">
-                      <div className="ig-breakdown-item">
-                        <span className="ig-breakdown-label">Pengikut</span>
-                        <span className="ig-breakdown-value" style={{ color: "#00C6A7" }}>{num(totalF)}</span>
-                      </div>
-                      <div className="ig-breakdown-item">
-                        <span className="ig-breakdown-label">Non-pengikut</span>
-                        <span className="ig-breakdown-value" style={{ color: "#BB2649" }}>{num(totalNF)}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </>
-            )}
+            <p className="ig-breakdown-title">Perincian tayangan</p>
+            <p className="ig-breakdown-period">{fmtPeriod(dateStart, dateStop)}</p>
+            {(() => {
+              const totalViews   = overview?.views ?? 0;
+              const rawPaid      = (dailyChart ?? []).reduce((s, d) => s + d.paidImpressions, 0);
+              const paidViews    = Math.min(rawPaid, totalViews);
+              const organicViews = Math.max(0, totalViews - paidViews);
+              return (
+                <div className="ig-breakdown-items">
+                  <div className="ig-breakdown-item">
+                    <span className="ig-breakdown-label">Total</span>
+                    <span className="ig-breakdown-value">{num(totalViews)}</span>
+                  </div>
+                  <div className="ig-breakdown-item">
+                    <span className="ig-breakdown-label">Dari organik</span>
+                    <span className="ig-breakdown-value">{num(organicViews)}</span>
+                  </div>
+                  <div className="ig-breakdown-item">
+                    <span className="ig-breakdown-label">Dari iklan</span>
+                    <span className="ig-breakdown-value">{num(paidViews)}</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
