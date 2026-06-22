@@ -118,6 +118,7 @@ export type Database = {
 
 export interface CompetitorAd {
   id: string;
+  ad_id: string | null;
   competitor_name: string;
   page_name: string | null;
   ad_copy: string | null;
@@ -125,6 +126,7 @@ export interface CompetitorAd {
   platforms: string[] | null;
   media_type: string | null;
   started_running: string | null;
+  started_running_date: string | null;
   country: string | null;
   snapshot_url: string | null;
   scraped_at: string;
