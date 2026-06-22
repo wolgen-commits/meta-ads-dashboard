@@ -731,22 +731,49 @@ export function useIgContentOverview(
         };
       }
 
-      // Untuk semua/postingan: gunakan account-level metrics dari Meta API via API route
-      // (metric_type=total_value agar cocok dengan angka di Meta Business Suite)
+      // Untuk semua/postingan: gunakan data dari Supabase (ig_media_insights + ig_account_insights)
       async function fetchAccountPeriod(from: string, to: string) {
-        const params = new URLSearchParams({ igAccountId: accountId, dateStart: from, dateStop: to });
-        const res  = await fetch(`/api/ig-summary?${params}`);
-        if (!res.ok) return { views: 0, reach: 0, engagement: 0, noInsights: false };
-        const json = await res.json() as {
-          views: number; reach: number; totalInteractions: number;
-          likes: number; comments: number; shares: number; saves: number;
-        };
-        return {
-          views:      json.views             ?? 0,
-          reach:      json.reach             ?? 0,
-          engagement: json.totalInteractions ?? 0,
-          noInsights: false,
-        };
+        // Ambil media di periode ini (filter by type untuk "postingan")
+        let mediaQuery = supabase
+          .from("ig_media")
+          .select("id")
+          .eq("ig_account_id", accountId)
+          .gte("timestamp", `${from}T00:00:00`)
+          .lte("timestamp", `${to}T23:59:59`);
+        if (contentType === "postingan") mediaQuery = mediaQuery.neq("media_product_type", "STORY");
+
+        const { data: mediaData } = await mediaQuery as { data: { id: string }[] | null };
+        const mediaIds = (mediaData ?? []).map(m => m.id);
+
+        // Impressions + reach + interaksi dari ig_media_insights
+        let views = 0, reach = 0, engagement = 0;
+        if (mediaIds.length > 0) {
+          const { data: ins } = await supabase
+            .from("ig_media_insights")
+            .select("impressions,reach,likes,comments,shares,saved")
+            .in("media_id", mediaIds) as { data: { impressions: number; reach: number; likes: number; comments: number; shares: number; saved: number }[] | null };
+          for (const i of ins ?? []) {
+            views      += i.impressions ?? 0;
+            reach      += i.reach       ?? 0;
+            engagement += (i.likes ?? 0) + (i.comments ?? 0) + (i.shares ?? 0) + (i.saved ?? 0);
+          }
+        }
+
+        // Untuk "semua": timpa reach dengan account-level reach (lebih akurat, deduplikasi unik)
+        if (contentType === "semua") {
+          const { data: acct } = await supabase
+            .from("ig_account_insights")
+            .select("reach,likes_count,comments_count,shares_count,saves_count")
+            .eq("ig_account_id", accountId)
+            .gte("date", from)
+            .lte("date", to) as { data: { reach: number; likes_count: number; comments_count: number; shares_count: number; saves_count: number }[] | null };
+          if ((acct ?? []).length > 0) {
+            reach      = (acct ?? []).reduce((s, r) => s + (r.reach       ?? 0), 0);
+            engagement = (acct ?? []).reduce((s, r) => s + (r.likes_count ?? 0) + (r.comments_count ?? 0) + (r.shares_count ?? 0) + (r.saves_count ?? 0), 0);
+          }
+        }
+
+        return { views, reach, engagement, noInsights: false };
       }
 
       const [curr, prev] = await Promise.all([
