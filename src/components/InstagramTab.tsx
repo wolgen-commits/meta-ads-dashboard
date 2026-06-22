@@ -299,156 +299,8 @@ export function InstagramTab() {
         </div>
       </div>
 
-      {/* ── Gambaran umum konten ── */}
-      <div className="ig-overview-card">
-        <div className="ig-overview-header">
-          <h3 className="ig-overview-title">Gambaran umum konten</h3>
-        </div>
-
-        {/* Content type tabs */}
-        <div className="ig-content-tabs">
-          {CONTENT_TABS.map(t => (
-            <button
-              key={t.key}
-              className={`ig-content-tab${contentTab === t.key ? " active" : ""}`}
-              onClick={() => setContentTab(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Metrics row */}
-        <div className="ig-metrics-row">
-          {loadingOverview ? (
-            <>
-              <div className="ig-metric-skeleton" />
-              <div className="ig-metric-skeleton" />
-              <div className="ig-metric-skeleton" />
-            </>
-          ) : (
-            <>
-              <div className="ig-metric">
-                <span className="ig-metric-label">Tayangan</span>
-                {overview?.noInsights
-                  ? <span className="ig-metric-value ig-metric-na">—</span>
-                  : <span className="ig-metric-value">{num(overview?.views ?? 0)}</span>
-                }
-                {!overview?.noInsights && <GrowthBadge pct={overview?.viewsGrowth} />}
-              </div>
-              <div className="ig-metric-divider" />
-              <div className="ig-metric">
-                <span className="ig-metric-label">Jangkauan</span>
-                {overview?.noInsights
-                  ? <span className="ig-metric-value ig-metric-na">—</span>
-                  : <span className="ig-metric-value">{num(overview?.reach ?? 0)}</span>
-                }
-                {!overview?.noInsights && <GrowthBadge pct={overview?.reachGrowth} />}
-              </div>
-              <div className="ig-metric-divider" />
-              <div className="ig-metric">
-                <span className="ig-metric-label">Interaksi konten</span>
-                {overview?.noInsights
-                  ? <span className="ig-metric-value ig-metric-na">—</span>
-                  : <span className="ig-metric-value">{num(overview?.engagement ?? 0)}</span>
-                }
-                {!overview?.noInsights && <GrowthBadge pct={overview?.engagementGrowth} />}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Pesan keterbatasan data cerita */}
-        {!loadingOverview && overview?.noInsights && (
-          <p className="ig-no-insights-note">
-            Data jangkauan dan interaksi cerita hanya tersedia dalam 24 jam setelah tayang. Cerita yang lebih lama tidak dapat diambil dari API Meta.
-          </p>
-        )}
-
-        {/* Chart + Breakdown panel */}
-        <div className="ig-chart-layout">
-          <div className="ig-chart-area">
-            {loadingChart ? (
-                <div className="chart-skeleton" style={{ height: IG_CHART_HEIGHT }} />
-              ) : (dailyChart ?? []).length === 0 ? (
-                <div className="chart-empty" style={{ height: IG_CHART_HEIGHT }}>Belum ada data tayangan untuk periode ini</div>
-              ) : (
-                <ResponsiveContainer width="100%" height={IG_CHART_HEIGHT}>
-                  <LineChart data={dailyChart ?? []} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
-                    <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={36} />
-                    <Tooltip
-                      labelFormatter={fmtAxisDate}
-                      formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
-                      contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 11, fontFamily: "DM Sans" }} />
-                    <Line type="monotone" dataKey="total"   name="Tayangan"     stroke="#1877F2" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                    <Line type="monotone" dataKey="organic" name="Dari organik"  stroke="#00C6A7" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} strokeDasharray="4 2" />
-                    <Line type="monotone" dataKey="paid"    name="Dari iklan"    stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} strokeDasharray="2 2" />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-          </div>
-
-          <div className="ig-breakdown-panel">
-            <p className="ig-breakdown-title">Perincian tayangan</p>
-            <p className="ig-breakdown-period">{fmtPeriod(dateStart, dateStop)}</p>
-            {(() => {
-              const totalViews   = overview?.views ?? 0;
-              const rawPaid      = (dailyChart ?? []).reduce((s, d) => s + d.paidImpressions, 0);
-              const paidViews    = Math.min(rawPaid, totalViews);
-              const organicViews = Math.max(0, totalViews - paidViews);
-              return (
-                <div className="ig-breakdown-items">
-                  <div className="ig-breakdown-item">
-                    <span className="ig-breakdown-label">Total</span>
-                    <span className="ig-breakdown-value">{num(totalViews)}</span>
-                  </div>
-                  <div className="ig-breakdown-item">
-                    <span className="ig-breakdown-label">Dari organik</span>
-                    <span className="ig-breakdown-value">{num(organicViews)}</span>
-                  </div>
-                  <div className="ig-breakdown-item">
-                    <span className="ig-breakdown-label">Dari iklan</span>
-                    <span className="ig-breakdown-value">{num(paidViews)}</span>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Konten populer ── */}
-      <div className="ig-popular-section">
-        <div className="ig-popular-header">
-          <h3 className="ig-popular-title">Konten populer sepanjang masa</h3>
-          <div className="ig-popular-actions">
-            <button className="ig-action-btn">Promosikan konten</button>
-            <a href={igUrl} target="_blank" rel="noopener noreferrer" className="ig-action-btn">
-              Lihat semua konten
-            </a>
-          </div>
-        </div>
-
-        <div className="ig-popular-scroll">
-          {loadingMedia ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="ig-popular-card ig-popular-card--skeleton" />
-            ))
-          ) : (topMedia ?? []).length === 0 ? (
-            <p style={{ color: "var(--gray-400)", fontSize: 14 }}>Belum ada konten.</p>
-          ) : (
-            (topMedia ?? []).map(m => <PopularCard key={m.id} media={m} onClick={() => setSelectedMedia(m)} />)
-          )}
-        </div>
-      </div>
-
-      {/* ── Demografi Audience (lifetime, dari ig_audience_breakdown) ── */}
+      {/* ── Chart grid (tayangan + demografi + pertumbuhan pengikut) ── */}
       <div className="ig-audience-section">
-        <p className="ig-audience-section-title">Demografi Audience</p>
         {loadingAudience ? (
           <div className="ig-audience-grid">
             {[0,1,2,3].map(i => <div key={i} className="chart-card"><div className="chart-skeleton" style={{ height: 200 }} /></div>)}
@@ -459,6 +311,36 @@ export function InstagramTab() {
           </div>
         ) : (
           <div className="ig-audience-grid">
+
+            {/* Tayangan Harian */}
+            <div className="chart-card">
+              <div style={{ marginBottom: 8 }}>
+                <h3 className="chart-title" style={{ marginBottom: 2 }}>Tayangan Harian</h3>
+                <div style={{ fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>{fmtPeriod(dateStart, dateStop)}</div>
+              </div>
+              {loadingChart ? (
+                <div className="chart-skeleton" style={{ height: 220 }} />
+              ) : (dailyChart ?? []).length === 0 ? (
+                <div className="chart-empty" style={{ height: 220 }}>Belum ada data untuk periode ini</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={dailyChart ?? []} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} />
+                    <YAxis tick={{ fontSize: 10, fill: tickColor, fontFamily: "DM Sans" }} tickFormatter={num} width={36} />
+                    <Tooltip
+                      labelFormatter={fmtAxisDate}
+                      formatter={(v: unknown, name: unknown) => [num(Number(v ?? 0)), String(name ?? "")]}
+                      contentStyle={{ fontSize: 12, fontFamily: "DM Sans", borderRadius: 8, border: `1px solid ${gridColor}`, background: tooltipBg }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11, fontFamily: "DM Sans" }} />
+                    <Line type="monotone" dataKey="total"   name="Total"   stroke="#1877F2" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="organic" name="Organik" stroke="#00C6A7" strokeWidth={2} dot={false} activeDot={{ r: 4 }} strokeDasharray="4 2" />
+                    <Line type="monotone" dataKey="paid"    name="Iklan"   stroke="#F59E0B" strokeWidth={2} dot={false} activeDot={{ r: 4 }} strokeDasharray="2 2" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
 
             {/* Usia */}
             {byAge.length > 0 && (
@@ -612,6 +494,29 @@ export function InstagramTab() {
         )}
       </div>
 
+      {/* ── Konten populer ── */}
+      <div className="ig-popular-section">
+        <div className="ig-popular-header">
+          <h3 className="ig-popular-title">Konten populer sepanjang masa</h3>
+          <div className="ig-popular-actions">
+            <button className="ig-action-btn">Promosikan konten</button>
+            <a href={igUrl} target="_blank" rel="noopener noreferrer" className="ig-action-btn">
+              Lihat semua konten
+            </a>
+          </div>
+        </div>
+        <div className="ig-popular-scroll">
+          {loadingMedia ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="ig-popular-card ig-popular-card--skeleton" />
+            ))
+          ) : (topMedia ?? []).length === 0 ? (
+            <p style={{ color: "var(--gray-400)", fontSize: 14 }}>Belum ada konten.</p>
+          ) : (
+            (topMedia ?? []).map(m => <PopularCard key={m.id} media={m} onClick={() => setSelectedMedia(m)} />)
+          )}
+        </div>
+      </div>
 
     </div>
   );

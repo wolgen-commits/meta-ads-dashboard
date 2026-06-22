@@ -789,9 +789,9 @@ body {
 /* Summary cards */
 .ig-summary-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(4, minmax(0, 160px));
+  gap: 10px;
+  margin-bottom: -1px;
 }
 @media (max-width: 768px) {
   .ig-summary-cards { grid-template-columns: repeat(2, 1fr); }
@@ -800,21 +800,21 @@ body {
   background: var(--surface);
   border: 1px solid var(--gray-200);
   border-top: 3px solid #BB2649;
-  border-radius: 10px;
-  padding: 16px 20px;
+  border-radius: 8px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 .ig-summary-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--gray-400);
 }
 .ig-summary-value {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   font-family: "DM Mono", monospace;
   color: var(--gray-900);
@@ -824,7 +824,7 @@ body {
   color: var(--gray-300);
 }
 .ig-summary-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--gray-400);
 }
 
@@ -1078,7 +1078,7 @@ body {
 .ig-chart-toggle-btn:hover:not(.active) { border-color: #BB2649; color: #BB2649; }
 
 /* ── INSTAGRAM AUDIENCE SECTION ── */
-.ig-audience-section { display: flex; flex-direction: column; }
+.ig-audience-section { display: flex; flex-direction: column; margin-top: calc(-20px + 4px); }
 .ig-audience-section-title {
   font-size: 13px; font-weight: 600; text-transform: uppercase;
   letter-spacing: .06em; color: var(--gray-500);
