@@ -259,6 +259,46 @@ export function InstagramTab() {
         </div>
       </div>
 
+      {/* ── Summary cards ── */}
+      <div className="ig-summary-cards">
+        {/* Pengikut */}
+        <div className="ig-summary-card">
+          <span className="ig-summary-label">Pengikut</span>
+          <span className="ig-summary-value">{num(currentAccount?.followers_count ?? 0)}</span>
+          <span className="ig-summary-sub">{currentAccount?.media_count ?? 0} konten</span>
+        </div>
+
+        {/* Tayangan */}
+        <div className="ig-summary-card">
+          <span className="ig-summary-label">Tayangan</span>
+          {loadingOverview
+            ? <span className="ig-summary-value ig-summary-loading">—</span>
+            : <span className="ig-summary-value">{num(overview?.views ?? 0)}</span>
+          }
+          {!loadingOverview && <GrowthBadge pct={overview?.viewsGrowth} />}
+        </div>
+
+        {/* Jangkauan */}
+        <div className="ig-summary-card">
+          <span className="ig-summary-label">Jangkauan</span>
+          {loadingOverview
+            ? <span className="ig-summary-value ig-summary-loading">—</span>
+            : <span className="ig-summary-value">{num(overview?.reach ?? 0)}</span>
+          }
+          {!loadingOverview && <GrowthBadge pct={overview?.reachGrowth} />}
+        </div>
+
+        {/* Interaksi */}
+        <div className="ig-summary-card">
+          <span className="ig-summary-label">Interaksi</span>
+          {loadingOverview
+            ? <span className="ig-summary-value ig-summary-loading">—</span>
+            : <span className="ig-summary-value">{num(overview?.engagement ?? 0)}</span>
+          }
+          {!loadingOverview && <GrowthBadge pct={overview?.engagementGrowth} />}
+        </div>
+      </div>
+
       {/* ── Gambaran umum konten ── */}
       <div className="ig-overview-card">
         <div className="ig-overview-header">

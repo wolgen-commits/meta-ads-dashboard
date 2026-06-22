@@ -786,6 +786,48 @@ body {
 }
 .ig-more-link:hover { text-decoration: underline; }
 
+/* Summary cards */
+.ig-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 768px) {
+  .ig-summary-cards { grid-template-columns: repeat(2, 1fr); }
+}
+.ig-summary-card {
+  background: var(--surface);
+  border: 1px solid var(--gray-200);
+  border-top: 3px solid #BB2649;
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ig-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray-400);
+}
+.ig-summary-value {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: "DM Mono", monospace;
+  color: var(--gray-900);
+  line-height: 1.1;
+}
+.ig-summary-loading {
+  color: var(--gray-300);
+}
+.ig-summary-sub {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
 /* Overview card */
 .ig-overview-card {
   background: var(--surface);
