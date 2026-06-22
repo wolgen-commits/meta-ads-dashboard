@@ -424,6 +424,8 @@ export function CompetitorAdsTab() {
   // Filters
   const [filterCompetitor, setFilterCompetitor] = useState("");
   const [filterObjective, setFilterObjective] = useState("");
+  const [filterDateStart, setFilterDateStart] = useState("");
+  const [filterDateStop,  setFilterDateStop]  = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   // Modal
@@ -431,7 +433,9 @@ export function CompetitorAdsTab() {
 
   const { data: ads, isLoading: adsLoading } = useCompetitorAdsList(
     filterCompetitor || undefined,
-    filterObjective || undefined
+    filterObjective  || undefined,
+    filterDateStart  || undefined,
+    filterDateStop   || undefined,
   );
   const { data: summary } = useCompetitorAdsSummary(filterCompetitor || undefined);
   const { data: jobStatus } = useJobStatus(activeJobId);
@@ -737,6 +741,28 @@ export function CompetitorAdsTab() {
             ))}
           </select>
         </div>
+        <div className="filter-group">
+          <label className="filter-label">Tanggal Scraping</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input
+              type="date"
+              className="date-input"
+              value={filterDateStart}
+              max={filterDateStop || undefined}
+              onChange={(e) => setFilterDateStart(e.target.value)}
+              style={{ width: 130 }}
+            />
+            <span style={{ color: "var(--gray-400)", fontSize: 12 }}>–</span>
+            <input
+              type="date"
+              className="date-input"
+              value={filterDateStop}
+              min={filterDateStart || undefined}
+              onChange={(e) => setFilterDateStop(e.target.value)}
+              style={{ width: 130 }}
+            />
+          </div>
+        </div>
         <div className="filter-group" style={{ marginLeft: "auto" }}>
           <label className="filter-label">Tampilan</label>
           <div className="ca-view-toggle">
@@ -744,10 +770,10 @@ export function CompetitorAdsTab() {
             <button className={`ca-view-btn${viewMode === "table" ? " active" : ""}`} onClick={() => setViewMode("table")}>Tabel</button>
           </div>
         </div>
-        {(filterCompetitor || filterObjective) && (
+        {(filterCompetitor || filterObjective || filterDateStart || filterDateStop) && (
           <div className="filter-group" style={{ justifyContent: "flex-end" }}>
             <label className="filter-label" style={{ opacity: 0 }}>–</label>
-            <button className="preset-btn" onClick={() => { setFilterCompetitor(""); setFilterObjective(""); }}>
+            <button className="preset-btn" onClick={() => { setFilterCompetitor(""); setFilterObjective(""); setFilterDateStart(""); setFilterDateStop(""); }}>
               Reset Filter
             </button>
           </div>

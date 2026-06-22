@@ -9,10 +9,12 @@ export type { JobProgress };
 export function useCompetitorAdsList(
   competitor?: string,
   objective?: string,
+  dateStart?: string,
+  dateStop?: string,
   limit = 50
 ) {
   return useSWR<CompetitorAd[]>(
-    ["competitor_ads_list", competitor, objective, limit],
+    ["competitor_ads_list", competitor, objective, dateStart, dateStop, limit],
     async () => {
       let query = supabase
         .from("competitor_ads")
@@ -20,7 +22,9 @@ export function useCompetitorAdsList(
         .order("scraped_at", { ascending: false })
         .limit(limit);
       if (competitor) query = query.eq("competitor_name", competitor);
-      if (objective) query = query.eq("inferred_objective", objective);
+      if (objective)  query = query.eq("inferred_objective", objective);
+      if (dateStart)  query = query.gte("scraped_at", `${dateStart}T00:00:00`);
+      if (dateStop)   query = query.lte("scraped_at", `${dateStop}T23:59:59`);
       const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as CompetitorAd[];
