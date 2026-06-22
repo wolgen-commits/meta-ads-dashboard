@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
-import { useIgAccounts, useIgContentOverview, useIgDailyChart, useIgTopMedia, useIgAccountInsightsTrend, useIgAudienceDemographics, useIgOnlineFollowers } from "@/hooks/useMetaData";
+import { useIgAccounts, useIgContentOverview, useIgDailyChart, useIgTopMedia, useIgBottomMedia, useIgAccountInsightsTrend, useIgAudienceDemographics, useIgOnlineFollowers } from "@/hooks/useMetaData";
 import type { IgMedia, IgMediaInsight } from "@/hooks/useMetaData";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -187,9 +187,8 @@ export function InstagramTab() {
   const { data: dailyChart, isLoading: loadingChart } = useIgDailyChart(
     currentId, dateStart, dateStop,
   );
-  const { data: topMedia, isLoading: loadingMedia } = useIgTopMedia(
-    currentId, "2000-01-01", isoDate(0), 10,
-  );
+  const { data: topMedia,    isLoading: loadingMedia    } = useIgTopMedia(currentId, "2000-01-01", isoDate(0), 10);
+  const { data: bottomMedia, isLoading: loadingBottomMedia } = useIgBottomMedia(currentId, 10);
   const { data: insightsTrend, isLoading: loadingInsights } = useIgAccountInsightsTrend(
     currentId, dateStart, dateStop,
   );
@@ -213,49 +212,43 @@ export function InstagramTab() {
         <MediaDetailModal media={selectedMedia} onClose={() => setSelectedMedia(null)} />
       )}
 
-      {/* ── Header: lihat lebih banyak + account selector + date range ── */}
+      {/* ── Header: account selector + date range ── */}
       <div className="ig-tab-header">
-        <a href={igUrl} target="_blank" rel="noopener noreferrer" className="ig-more-link">
-          Lihat lebih banyak
-        </a>
+        <div className="ig-account-select-wrap">
+          <span className="ig-select-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <select
+            className="ig-account-select"
+            value={currentId}
+            onChange={e => setActiveAccount(e.target.value)}
+          >
+            {accounts.filter(a => a.id === "17841457712254566").map(a => (
+              <option key={a.id} value={a.id}>
+                @{a.username ?? a.name}
+              </option>
+            ))}
+          </select>
+          <span className="ig-select-arrow">▾</span>
+        </div>
 
-        <div className="ig-tab-header-controls">
-          <div className="ig-account-select-wrap">
-            <span className="ig-select-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
-            </span>
-            <select
-              className="ig-account-select"
-              value={currentId}
-              onChange={e => setActiveAccount(e.target.value)}
-            >
-              {accounts.filter(a => a.id === "17841457712254566").map(a => (
-                <option key={a.id} value={a.id}>
-                  @{a.username ?? a.name}
-                </option>
-              ))}
-            </select>
-            <span className="ig-select-arrow">▾</span>
-          </div>
-
-          <div className="ig-date-picker">
-            <span className="ig-date-icon">📅</span>
-            <input
-              type="date"
-              className="ig-date-input"
-              value={dateStart}
-              max={dateStop}
-              onChange={e => setDateStart(e.target.value)}
-            />
-            <span style={{ color: "var(--gray-400)", fontSize: 13 }}>–</span>
-            <input
-              type="date"
-              className="ig-date-input"
-              value={dateStop}
-              min={dateStart}
-              onChange={e => setDateStop(e.target.value)}
-            />
-          </div>
+        <div className="ig-date-picker">
+          <span className="ig-date-icon">📅</span>
+          <input
+            type="date"
+            className="ig-date-input"
+            value={dateStart}
+            max={dateStop}
+            onChange={e => setDateStart(e.target.value)}
+          />
+          <span style={{ color: "var(--gray-400)", fontSize: 13 }}>–</span>
+          <input
+            type="date"
+            className="ig-date-input"
+            value={dateStop}
+            min={dateStart}
+            onChange={e => setDateStop(e.target.value)}
+          />
         </div>
       </div>
 
@@ -514,6 +507,29 @@ export function InstagramTab() {
             <p style={{ color: "var(--gray-400)", fontSize: 14 }}>Belum ada konten.</p>
           ) : (
             (topMedia ?? []).map(m => <PopularCard key={m.id} media={m} onClick={() => setSelectedMedia(m)} />)
+          )}
+        </div>
+      </div>
+
+      {/* ── Konten kurang populer ── */}
+      <div className="ig-popular-section">
+        <div className="ig-popular-header">
+          <h3 className="ig-popular-title">Konten kurang populer sepanjang masa</h3>
+          <div className="ig-popular-actions">
+            <a href={igUrl} target="_blank" rel="noopener noreferrer" className="ig-action-btn">
+              Lihat semua konten
+            </a>
+          </div>
+        </div>
+        <div className="ig-popular-scroll">
+          {loadingBottomMedia ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="ig-popular-card ig-popular-card--skeleton" />
+            ))
+          ) : (bottomMedia ?? []).length === 0 ? (
+            <p style={{ color: "var(--gray-400)", fontSize: 14 }}>Belum ada konten.</p>
+          ) : (
+            (bottomMedia ?? []).map(m => <PopularCard key={m.id} media={m} onClick={() => setSelectedMedia(m)} />)
           )}
         </div>
       </div>

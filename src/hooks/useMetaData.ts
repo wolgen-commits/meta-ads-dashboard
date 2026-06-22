@@ -987,3 +987,49 @@ export function useIgTopMedia(accountId: string, _dateStart: string, _dateStop: 
     { refreshInterval: REVALIDATE },
   );
 }
+
+export function useIgBottomMedia(accountId: string, limit = 10) {
+  return useSWR<(IgMedia & IgMediaInsight)[]>(
+    ["ig_bottom_media_alltime", accountId, limit],
+    async () => {
+      if (!accountId) return [];
+
+      const { data: mediaIdRows, error: mediaIdErr } = await supabase
+        .from("ig_media")
+        .select("id")
+        .eq("ig_account_id", accountId)
+        .not("media_product_type", "eq", "STORY");
+      if (mediaIdErr) throw mediaIdErr;
+
+      const allIds = (mediaIdRows ?? []).map((r: { id: string }) => r.id);
+      if (allIds.length === 0) return [];
+
+      const { data: insightData, error: insightErr } = await supabase
+        .from("ig_media_insights")
+        .select("*")
+        .in("media_id", allIds)
+        .order("impressions", { ascending: true })
+        .limit(limit);
+      if (insightErr) throw insightErr;
+
+      const bottomInsights = (insightData ?? []) as IgMediaInsight[];
+      if (bottomInsights.length === 0) return [];
+
+      const bottomIds = bottomInsights.map(i => i.media_id);
+      const { data: mediaData, error: mediaErr } = await supabase
+        .from("ig_media")
+        .select("*")
+        .in("id", bottomIds);
+      if (mediaErr) throw mediaErr;
+
+      const mediaMap = new Map(
+        (mediaData ?? []).map((m: IgMedia) => [m.id, m]),
+      );
+
+      return bottomInsights
+        .map(ins => ({ ...mediaMap.get(ins.media_id)!, ...ins }) as IgMedia & IgMediaInsight)
+        .filter(m => m.id);
+    },
+    { refreshInterval: REVALIDATE },
+  );
+}
