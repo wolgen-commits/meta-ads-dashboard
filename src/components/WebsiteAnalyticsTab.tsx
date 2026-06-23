@@ -7,6 +7,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from "recharts";
+import { KpiCard } from "@/components/KpiCard";
 import {
   useGa4KpiTotals,
   useGa4DailyTrend,
@@ -125,6 +126,25 @@ function hoverRow(e: React.MouseEvent<HTMLTableRowElement>, enter: boolean) {
   e.currentTarget.style.background = enter ? "var(--gray-50)" : "";
 }
 
+// ── Sub-tab button style ──────────────────────────────────────────────────────
+
+function TabBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "2px 7px", borderRadius: 4, fontSize: 10, cursor: "pointer",
+        fontWeight: active ? 600 : 400,
+        border: active ? "1px solid #BB2649" : "1px solid var(--gray-200)",
+        background: active ? "#BB2649" : "transparent",
+        color: active ? "#fff" : "var(--gray-500)",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -152,6 +172,8 @@ export function WebsiteAnalyticsTab() {
   const { data: pages,        isLoading: pagesLoading } = useGa4Pages(dateStart, dateStop, 20);
   const { data: geoData,      isLoading: geoLoading }   = useGa4Geography(dateStart, dateStop, 20);
   const { data: searchConsole, isLoading: scLoading }   = useGa4SearchConsole(dateStart, dateStop, 50);
+
+  const totalScClicks = (searchConsole ?? []).reduce((s, r) => s + r.clicks, 0);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -182,39 +204,68 @@ export function WebsiteAnalyticsTab() {
         </div>
       </div>
 
-      {/* ── KPI strip ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 10, marginBottom: 12 }}>
-        {[
-          { label: "Sesi",         val: ga4Loading ? "—" : num(ga4Totals?.sessions ?? 0),        color: "#BB2649" },
-          { label: "Pengguna",      val: ga4Loading ? "—" : num(ga4Totals?.users ?? 0),           color: "#2563EB" },
-          { label: "Pengguna Baru", val: ga4Loading ? "—" : num(ga4Totals?.new_users ?? 0),       color: "#6B7280" },
-          { label: "Konversi",      val: ga4Loading ? "—" : num(ga4Totals?.conversions ?? 0),     color: "#16A34A" },
-          { label: "Bounce Rate",   val: ga4Loading ? "—" : pct(ga4Totals?.bounce_rate ?? 0),     color: (ga4Totals?.bounce_rate ?? 0) > 60 ? "#D97706" : "#16A34A" },
-          { label: "Engagement",    val: ga4Loading ? "—" : pct(ga4Totals?.engagement_rate ?? 0), color: (ga4Totals?.engagement_rate ?? 0) >= 40 ? "#16A34A" : "#D97706" },
-        ].map(({ label, val, color }) => (
-          <div key={label} style={{ background: "var(--surface)", borderRadius: 8, padding: "8px 12px", borderTop: `3px solid ${color}`, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize: 10, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3, fontWeight: 600 }}>{label}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color, fontFamily: "var(--font-mono, monospace)", lineHeight: 1 }}>{val}</div>
-          </div>
-        ))}
-      </div>
+      {/* ── KPI cards ── */}
+      <section className="kpi-grid">
+        <KpiCard
+          label="Sesi"
+          value={ga4Loading ? "—" : num(ga4Totals?.sessions ?? 0)}
+          loading={ga4Loading}
+          accent="magenta"
+          description="Jumlah total sesi pengunjung website dalam periode yang dipilih."
+        />
+        <KpiCard
+          label="Pengguna"
+          value={ga4Loading ? "—" : num(ga4Totals?.users ?? 0)}
+          loading={ga4Loading}
+          accent="info"
+          description="Jumlah pengguna unik yang mengunjungi website dalam periode yang dipilih."
+        />
+        <KpiCard
+          label="Pengguna Baru"
+          value={ga4Loading ? "—" : num(ga4Totals?.new_users ?? 0)}
+          loading={ga4Loading}
+          description="Jumlah pengguna yang baru pertama kali mengunjungi website."
+        />
+        <KpiCard
+          label="Konversi"
+          value={ga4Loading ? "—" : num(ga4Totals?.conversions ?? 0)}
+          loading={ga4Loading}
+          accent="success"
+          description="Jumlah total konversi yang terjadi di website dalam periode yang dipilih."
+        />
+        <KpiCard
+          label="Bounce Rate"
+          value={ga4Loading ? "—" : pct(ga4Totals?.bounce_rate ?? 0)}
+          loading={ga4Loading}
+          accent={(ga4Totals?.bounce_rate ?? 0) > 60 ? "warning" : "success"}
+          description="Persentase sesi yang meninggalkan website tanpa interaksi. Semakin rendah semakin baik."
+        />
+        <KpiCard
+          label="Engagement"
+          value={ga4Loading ? "—" : pct(ga4Totals?.engagement_rate ?? 0)}
+          loading={ga4Loading}
+          accent={(ga4Totals?.engagement_rate ?? 0) >= 40 ? "success" : "warning"}
+          description="Persentase sesi yang melakukan interaksi dengan website (klik, scroll, dll)."
+        />
+      </section>
 
       {/* ── Baris 1: Tren & Traffic | Demografi & Platform | Kueri Organik ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12, marginTop: 16 }}>
 
         {/* Card 1: Tren & Traffic */}
         <div className="chart-card" style={{ padding: "12px 14px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)" }}>Tren & Traffic</span>
+          <div className="chart-header-row">
+            <div>
+              <h3 className="chart-title" style={{ marginBottom: 2 }}>Tren & Traffic</h3>
+              <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                <span>Sesi: <strong style={{ color: "#2563EB" }}>{num(ga4Totals?.sessions ?? 0)}</strong></span>
+                <span>·</span>
+                <span>Pengguna: <strong style={{ color: "#16A34A" }}>{num(ga4Totals?.users ?? 0)}</strong></span>
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 4 }}>
-              {(["Harian", "Channel"] as const).map((t) => {
-                const k = t === "Harian" ? "harian" : "channel";
-                return (
-                  <button key={t} onClick={() => setTrendTab(k as typeof trendTab)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: trendTab === k ? 600 : 400, cursor: "pointer", border: trendTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: trendTab === k ? "#BB2649" : "transparent", color: trendTab === k ? "#fff" : "var(--gray-500)" }}>
-                    {t}
-                  </button>
-                );
-              })}
+              <TabBtn label="Harian"  active={trendTab === "harian"}  onClick={() => setTrendTab("harian")} />
+              <TabBtn label="Channel" active={trendTab === "channel"} onClick={() => setTrendTab("channel")} />
             </div>
           </div>
           {trendTab === "harian" ? (
@@ -254,12 +305,19 @@ export function WebsiteAnalyticsTab() {
 
         {/* Card 2: Demografi & Platform */}
         <div className="chart-card" style={{ padding: "12px 14px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)" }}>Demografi & Platform</span>
+          <div className="chart-header-row">
+            <div>
+              <h3 className="chart-title" style={{ marginBottom: 2 }}>Demografi & Platform</h3>
+              <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                <span>Sesi: <strong style={{ color: "#2563EB" }}>{num(ga4Totals?.sessions ?? 0)}</strong></span>
+                <span>·</span>
+                <span>Konversi: <strong style={{ color: "#16A34A" }}>{num(ga4Totals?.conversions ?? 0)}</strong></span>
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 4 }}>
-              {[{ k: "usia", l: "Usia" }, { k: "gender", l: "Gender" }, { k: "device", l: "Device" }].map(({ k, l }) => (
-                <button key={k} onClick={() => setDemoTab(k as typeof demoTab)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: demoTab === k ? 600 : 400, cursor: "pointer", border: demoTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: demoTab === k ? "#BB2649" : "transparent", color: demoTab === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
-              ))}
+              <TabBtn label="Usia"   active={demoTab === "usia"}   onClick={() => setDemoTab("usia")} />
+              <TabBtn label="Gender" active={demoTab === "gender"} onClick={() => setDemoTab("gender")} />
+              <TabBtn label="Device" active={demoTab === "device"} onClick={() => setDemoTab("device")} />
             </div>
           </div>
           {demoTab === "usia" && (demoLoading ? <Empty msg="Memuat…" /> : demoSummary.byAge.length === 0 ? <Empty msg="Belum ada data." /> : (
@@ -301,7 +359,16 @@ export function WebsiteAnalyticsTab() {
 
         {/* Card 3: Kueri Organik Google */}
         <div className="chart-card" style={{ padding: "12px 14px", overflow: "hidden" }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)", display: "block", marginBottom: 8 }}>Kueri Organik Google</span>
+          <div className="chart-header-row">
+            <div>
+              <h3 className="chart-title" style={{ marginBottom: 2 }}>Kueri Organik Google</h3>
+              <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                <span>{searchConsole?.length ?? 0} kueri</span>
+                <span>·</span>
+                <span>Klik: <strong style={{ color: "#16A34A" }}>{num(totalScClicks)}</strong></span>
+              </div>
+            </div>
+          </div>
           {scLoading ? <Empty msg="Memuat…" /> : !searchConsole || searchConsole.length === 0 ? <Empty msg="Belum ada data Search Console." /> : (
             <div style={{ overflowY: "auto", maxHeight: 220 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
@@ -328,14 +395,20 @@ export function WebsiteAnalyticsTab() {
       {/* ── Baris 2: Konten | Lokasi | Platform ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
 
-        {/* Card 4: Konten (Landing | Halaman) */}
+        {/* Card 4: Konten */}
         <div className="chart-card" style={{ padding: "12px 14px", overflow: "hidden" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)" }}>Konten</span>
+          <div className="chart-header-row">
+            <div>
+              <h3 className="chart-title" style={{ marginBottom: 2 }}>Konten Website</h3>
+              <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                <span>{landingPages?.length ?? 0} landing page</span>
+                <span>·</span>
+                <span>Top: <strong style={{ color: "#2563EB", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100, display: "inline-block", verticalAlign: "bottom" }}>{landingPages?.[0]?.landing_page ?? "—"}</strong></span>
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 4 }}>
-              {[{ k: "landing", l: "Landing" }, { k: "halaman", l: "Halaman" }].map(({ k, l }) => (
-                <button key={k} onClick={() => setContentTab(k as typeof contentTab)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: contentTab === k ? 600 : 400, cursor: "pointer", border: contentTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: contentTab === k ? "#BB2649" : "transparent", color: contentTab === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
-              ))}
+              <TabBtn label="Landing" active={contentTab === "landing"} onClick={() => setContentTab("landing")} />
+              <TabBtn label="Halaman" active={contentTab === "halaman"} onClick={() => setContentTab("halaman")} />
             </div>
           </div>
           {contentTab === "landing" ? (
@@ -378,7 +451,16 @@ export function WebsiteAnalyticsTab() {
 
         {/* Card 5: Lokasi */}
         <div className="chart-card" style={{ padding: "12px 14px", overflow: "hidden" }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)", display: "block", marginBottom: 8 }}>Lokasi</span>
+          <div className="chart-header-row">
+            <div>
+              <h3 className="chart-title" style={{ marginBottom: 2 }}>Lokasi</h3>
+              <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                <span>Top: <strong style={{ color: "#2563EB" }}>{geoData?.[0]?.country ?? "—"}</strong></span>
+                <span>·</span>
+                <span>Sesi: <strong style={{ color: "#BB2649" }}>{num(geoData?.[0]?.sessions ?? 0)}</strong></span>
+              </div>
+            </div>
+          </div>
           {geoLoading ? <Empty msg="Memuat…" /> : !geoData || geoData.length === 0 ? <Empty msg="Belum ada data." /> : (
             <div style={{ overflowY: "auto", maxHeight: 190 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
@@ -399,20 +481,31 @@ export function WebsiteAnalyticsTab() {
           )}
         </div>
 
-        {/* Card 6: Platform (OS | Browser) */}
+        {/* Card 6: Platform */}
         <div className="chart-card" style={{ padding: "12px 14px", overflow: "hidden" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)" }}>Platform</span>
+          <div className="chart-header-row">
+            <div>
+              <h3 className="chart-title" style={{ marginBottom: 2 }}>Platform</h3>
+              <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                <span>Top OS: <strong style={{ color: "#2563EB" }}>{platformSummary.byOS[0]?.name ?? "—"}</strong></span>
+                <span>·</span>
+                <span>Top Browser: <strong style={{ color: "#16A34A" }}>{platformSummary.byBrowser[0]?.name ?? "—"}</strong></span>
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 4 }}>
-              {[{ k: "os", l: "OS" }, { k: "browser", l: "Browser" }].map(({ k, l }) => (
-                <button key={k} onClick={() => setPlatformTab(k as typeof platformTab)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: platformTab === k ? 600 : 400, cursor: "pointer", border: platformTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: platformTab === k ? "#BB2649" : "transparent", color: platformTab === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
-              ))}
+              <TabBtn label="OS"      active={platformTab === "os"}      onClick={() => setPlatformTab("os")} />
+              <TabBtn label="Browser" active={platformTab === "browser"} onClick={() => setPlatformTab("browser")} />
             </div>
           </div>
           {platformLoading ? <Empty msg="Memuat…" /> : (
             <div style={{ overflowY: "auto", maxHeight: 190 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                <thead><tr><th style={{ ...TH_STYLE, fontSize: 10, padding: "4px 6px" }}>{platformTab === "os" ? "Sistem Operasi" : "Browser"}</th><th style={{ ...TH_STYLE, fontSize: 10, padding: "4px 6px", textAlign: "right" }}>Sesi</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th style={{ ...TH_STYLE, fontSize: 10, padding: "4px 6px" }}>{platformTab === "os" ? "Sistem Operasi" : "Browser"}</th>
+                    <th style={{ ...TH_STYLE, fontSize: 10, padding: "4px 6px", textAlign: "right" }}>Sesi</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {(platformTab === "os" ? platformSummary.byOS : platformSummary.byBrowser).slice(0, 8).map((item) => (
                     <tr key={item.name} onMouseEnter={(e) => hoverRow(e, true)} onMouseLeave={(e) => hoverRow(e, false)}>

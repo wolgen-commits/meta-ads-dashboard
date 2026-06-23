@@ -372,23 +372,16 @@ export function GoogleAdsTab() {
       {/* ═══════════════════════════════════════════════════════════════ */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
-          {/* KPI strip — 7 angka dalam 1 baris */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 8 }}>
-            {[
-              { label: "Pengeluaran", value: idr(gTotals?.spend ?? 0),       color: "#BB2649" },
-              { label: "Klik",        value: num(gTotals?.clicks ?? 0),       color: "#2563EB" },
-              { label: "Impresi",     value: num(gTotals?.impressions ?? 0),  color: "#6B7280" },
-              { label: "CTR",         value: pct(gTotals?.ctr ?? 0),          color: "#2563EB" },
-              { label: "CPC",         value: idr(gTotals?.cpc ?? 0),          color: "#6B7280" },
-              { label: "Konversi",    value: num(gTotals?.conversions ?? 0),  color: "#16A34A" },
-              { label: "Biaya/Konv.", value: idr(gTotals?.cpa ?? 0),          color: "#D97706" },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ background: "var(--surface)", borderRadius: 8, padding: "8px 10px", borderTop: `3px solid ${color}`, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                <div style={{ fontSize: 9, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3, fontWeight: 600 }}>{label}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color, fontFamily: "var(--font-mono, monospace)", lineHeight: 1 }}>{gLoading ? "—" : value}</div>
-              </div>
-            ))}
-          </div>
+          {/* KPI cards */}
+          <section className="kpi-grid">
+            <KpiCard label="Pengeluaran"  value={gLoading ? "—" : idr(gTotals?.spend ?? 0)}       loading={gLoading} accent="magenta" description="Total biaya iklan Google Ads yang dikeluarkan dalam periode yang dipilih." />
+            <KpiCard label="Klik"         value={gLoading ? "—" : num(gTotals?.clicks ?? 0)}       loading={gLoading} accent="info"    description="Jumlah total klik pada iklan Google Ads." />
+            <KpiCard label="Impresi"      value={gLoading ? "—" : num(gTotals?.impressions ?? 0)}  loading={gLoading}                  description="Jumlah total tayangan iklan dalam periode yang dipilih." />
+            <KpiCard label="CTR"          value={gLoading ? "—" : pct(gTotals?.ctr ?? 0)}          loading={gLoading} accent="info"    description="Click-Through Rate — persentase tayangan yang menghasilkan klik." />
+            <KpiCard label="CPC"          value={gLoading ? "—" : idr(gTotals?.cpc ?? 0)}          loading={gLoading} sub="per klik"   description="Cost Per Click — rata-rata biaya per klik iklan." />
+            <KpiCard label="Konversi"     value={gLoading ? "—" : num(gTotals?.conversions ?? 0)}  loading={gLoading} accent="success" description="Jumlah total konversi yang dihasilkan dari iklan." />
+            <KpiCard label="Biaya/Konv."  value={gLoading ? "—" : idr(gTotals?.cpa ?? 0)}          loading={gLoading} accent="warning" sub="per konversi" description="Rata-rata pengeluaran untuk mendapatkan satu konversi." />
+          </section>
 
           {/* Main 3-column grid */}
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1.1fr 1.4fr", gap: 12 }}>
@@ -396,7 +389,16 @@ export function GoogleAdsTab() {
             {/* ── Col A: Chart + Campaign table ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div className="chart-card" style={{ padding: "10px 14px" }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)", marginBottom: 6 }}>Pengeluaran & Klik Harian</p>
+                <div className="chart-header-row">
+                  <div>
+                    <h3 className="chart-title" style={{ marginBottom: 2 }}>Pengeluaran & Klik Harian</h3>
+                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                      <span>Total: <strong style={{ color: "#BB2649" }}>{idr(gTotals?.spend ?? 0)}</strong></span>
+                      <span>&middot;</span>
+                      <span>Klik: <strong style={{ color: "#D97706" }}>{num(gTotals?.clicks ?? 0)}</strong></span>
+                    </div>
+                  </div>
+                </div>
                 {chartLoading || dailyChart.length === 0 ? (
                   <Empty msg={chartLoading ? "Memuat…" : "Belum ada data. Jalankan fetch-google-ads."} />
                 ) : (
@@ -416,8 +418,15 @@ export function GoogleAdsTab() {
               </div>
 
               <div className="chart-card" style={{ padding: "10px 14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)" }}>Performa Campaign</p>
+                <div className="chart-header-row">
+                  <div>
+                    <h3 className="chart-title" style={{ marginBottom: 2 }}>Performa Campaign</h3>
+                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                      <span>{sortedCampaigns.length} campaign</span>
+                      <span>&middot;</span>
+                      <span>Total: <strong style={{ color: "#BB2649" }}>{idr(gTotals?.spend ?? 0)}</strong></span>
+                    </div>
+                  </div>
                   <div style={{ display: "flex", gap: 4 }}>
                     {(["spend","clicks","impressions","conversions"] as const).map((col) => (
                       <button key={col} onClick={() => setSortCol(col)} style={{ padding: "2px 7px", borderRadius: 10, fontSize: 10, cursor: "pointer", border: sortCol === col ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: sortCol === col ? "#BB2649" : "transparent", color: sortCol === col ? "#fff" : "var(--gray-500)" }}>
@@ -456,8 +465,15 @@ export function GoogleAdsTab() {
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div className="chart-card" style={{ padding: "10px 14px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)" }}>Audiens</span>
-                  <div style={{ display: "flex", gap: 3 }}>
+                <div className="chart-header-row">
+                  <div>
+                    <h3 className="chart-title" style={{ marginBottom: 2 }}>Audiens</h3>
+                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                      <span>Impresi: <strong style={{ color: "#BB2649" }}>{num(gTotals?.impressions ?? 0)}</strong></span>
+                      <span>&middot;</span>
+                      <span>Klik: <strong style={{ color: "#2563EB" }}>{num(gTotals?.clicks ?? 0)}</strong></span>
+                    </div>
+                  </div>
                     {([{ k: "age", l: "Usia" }, { k: "gender", l: "Gender" }, { k: "device", l: "Device" }] as const).map(({ k, l }) => (
                       <button key={k} onClick={() => setAdsAudienceTab(k)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: adsAudienceTab === k ? 600 : 400, cursor: "pointer", border: adsAudienceTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: adsAudienceTab === k ? "#BB2649" : "transparent", color: adsAudienceTab === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
                     ))}
@@ -528,8 +544,15 @@ export function GoogleAdsTab() {
 
               <div className="chart-card" style={{ padding: "10px 14px", flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)" }}>Wilayah & Jadwal</span>
-                  <div style={{ display: "flex", gap: 3 }}>
+                <div className="chart-header-row">
+                  <div>
+                    <h3 className="chart-title" style={{ marginBottom: 2 }}>Wilayah & Jadwal</h3>
+                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                      <span>Top: <strong style={{ color: "#2563EB" }}>{geoSummary[0]?.country_name ?? "—"}</strong></span>
+                      <span>&middot;</span>
+                      <span>Klik: <strong style={{ color: "#BB2649" }}>{num(geoSummary[0]?.clicks ?? 0)}</strong></span>
+                    </div>
+                  </div>
                     {([{ k: "country", l: "Negara" }, { k: "hour", l: "Jadwal" }, { k: "targeting", l: "Lokasi" }] as const).map(({ k, l }) => (
                       <button key={k} onClick={() => setAdsGeoTab(k)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: adsGeoTab === k ? 600 : 400, cursor: "pointer", border: adsGeoTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: adsGeoTab === k ? "#BB2649" : "transparent", color: adsGeoTab === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
                     ))}
@@ -611,8 +634,15 @@ export function GoogleAdsTab() {
             {/* ── Col C: Kata Kunci / Kueri / Ad Group / Iklan ── */}
             <div className="chart-card" style={{ padding: "10px 14px", display: "flex", flexDirection: "column", minHeight: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-700)" }}>Analisis Kata Kunci</span>
-                <div style={{ display: "flex", gap: 3 }}>
+              <div className="chart-header-row">
+                <div>
+                  <h3 className="chart-title" style={{ marginBottom: 2 }}>Analisis Kata Kunci</h3>
+                  <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--gray-500)" }}>
+                    <span>{keywordSummary.length} kata kunci</span>
+                    <span>&middot;</span>
+                    <span>Impresi: <strong style={{ color: "#BB2649" }}>{num(gTotals?.impressions ?? 0)}</strong></span>
+                  </div>
+                </div>
                   {([{ k: "keywords", l: "Kata Kunci" }, { k: "search_terms", l: "Kueri" }, { k: "adgroups", l: "Ad Group" }, { k: "ads", l: "Iklan" }] as const).map(({ k, l }) => (
                     <button key={k} onClick={() => setAdsKwTab(k)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: adsKwTab === k ? 600 : 400, cursor: "pointer", border: adsKwTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: adsKwTab === k ? "#BB2649" : "transparent", color: adsKwTab === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
                   ))}
