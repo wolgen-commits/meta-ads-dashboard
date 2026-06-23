@@ -401,9 +401,6 @@ export function GoogleAdsTab() {
             <KpiCard label="CPC"          value={gLoading ? "—" : idr(gTotals?.cpc ?? 0)}          loading={gLoading} sub="per klik"   description="Cost Per Click — rata-rata biaya per klik iklan." />
             <KpiCard label="Konversi"     value={gLoading ? "—" : num(gTotals?.conversions ?? 0)}  loading={gLoading} accent="success" description="Jumlah total konversi yang dihasilkan dari iklan." />
             <KpiCard label="Biaya/Konv."  value={gLoading ? "—" : idr(gTotals?.cpa ?? 0)}          loading={gLoading} accent="warning" sub="per konversi" description="Rata-rata pengeluaran untuk mendapatkan satu konversi." />
-            <KpiCard label="Imp. Share"   value={isTotals ? pct(isTotals.avg_is) : "—"}             accent="info"    sub="rata-rata" description="Search Impression Share — % tayangan yang berhasil ditampilkan vs total yang eligible." />
-            <KpiCard label="IS Hilang (Budget)" value={isTotals ? pct(isTotals.avg_budget_lost) : "—"} accent={isTotals && isTotals.avg_budget_lost > 20 ? "warning" : undefined} sub="rata-rata" description="% tayangan hilang karena budget iklan tidak cukup. Jika tinggi, pertimbangkan menaikkan budget." />
-            <KpiCard label="IS Hilang (Rank)"   value={isTotals ? pct(isTotals.avg_rank_lost) : "—"}   accent={isTotals && isTotals.avg_rank_lost > 20 ? "warning" : undefined}   sub="rata-rata" description="% tayangan hilang karena kualitas iklan/bid terlalu rendah. Jika tinggi, perbaiki Quality Score." />
           </section>
 
           {/* Main 3-column grid */}
@@ -884,7 +881,15 @@ export function GoogleAdsTab() {
                 </div>
               </div>
               {auctionLoading ? <Empty msg="Memuat…" /> :
-               !auctionSummary || auctionSummary.length === 0 ? <Empty msg="Jalankan type=auction_insights atau type=extended." /> : (
+               !auctionSummary || auctionSummary.length === 0 ? (
+                <div style={{ padding: "12px 0", textAlign: "center" }}>
+                  <p style={{ fontSize: 11, color: "var(--gray-400)", marginBottom: 6 }}>Tidak ada data lelang</p>
+                  <p style={{ fontSize: 10, color: "var(--gray-400)", lineHeight: 1.5 }}>
+                    Analisa Lelang hanya tersedia untuk kampanye <strong>Search</strong> yang aktif bersaing di Google Search.
+                    Kampanye Display/PMax tidak menghasilkan data ini.
+                  </p>
+                </div>
+              ) : (
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
                   <thead>
                     <tr>
@@ -960,46 +965,67 @@ export function GoogleAdsTab() {
               </div>
               {netLoading ? <Empty msg="Memuat…" /> :
                !networkSummary || networkSummary.length === 0 ? <Empty msg="Jalankan type=network atau type=extended." /> : (() => {
-                const NET_COLOR: Record<string, string> = { SEARCH: "#2563EB", DISPLAY: "#16A34A", YOUTUBE_WATCH: "#BB2649", CROSS_NETWORK: "#D97706", UNKNOWN: "var(--gray-400)" };
-                const NET_LABEL: Record<string, string> = { SEARCH: "Search", DISPLAY: "Display", YOUTUBE_WATCH: "YouTube", CROSS_NETWORK: "Cross", UNKNOWN: "Lainnya" };
-                const networks = Object.keys(NET_COLOR);
-                const chartData = (networkDaily ?? []).map((d) => {
-                  const row: Record<string, unknown> = { date: d.date };
-                  networks.forEach((n) => { row[n] = d[n as keyof typeof d] ?? 0; });
-                  return row;
-                });
+                const NET_COLOR: Record<string, string> = { SEARCH: "#2563EB", DISPLAY: "#16A34A", YOUTUBE_WATCH: "#BB2649", CROSS_NETWORK: "#D97706", CONTENT: "#7C3AED", MIXED: "#0891B2", UNKNOWN: "var(--gray-300)" };
+                const NET_LABEL: Record<string, string> = { SEARCH: "Search", DISPLAY: "Display", YOUTUBE_WATCH: "YouTube", CROSS_NETWORK: "Cross-Network", CONTENT: "Content", MIXED: "Mixed", UNKNOWN: "Lainnya" };
+                const totalCost = networkSummary.reduce((s, n) => s + n.cost_idr, 0);
+                const totalClicks = networkSummary.reduce((s, n) => s + n.clicks, 0);
+                const activeNets = networkSummary.filter((n) => n.cost_idr > 0 || n.clicks > 0);
                 return (
                   <div>
-                    {chartData.length > 0 && (
-                      <ResponsiveContainer width="100%" height={80}>
-                        <BarChart data={chartData} margin={{ top: 0, right: 0, left: -28, bottom: 0 }}>
-                          <XAxis dataKey="date" hide />
-                          <YAxis tickFormatter={(v) => num(v as number)} tick={{ fontSize: 8 }} />
-                          <Tooltip formatter={(v) => [safeIdr(v), ""]} contentStyle={{ fontSize: 10 }} />
-                          {networks.map((n) => (
-                            <Bar key={n} dataKey={n} stackId="a" fill={NET_COLOR[n]} name={NET_LABEL[n]} />
-                          ))}
-                        </BarChart>
-                      </ResponsiveContainer>
-                    )}
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10, marginTop: 6 }}>
-                      <thead><tr>{["Jaringan","Biaya","Klik","Konv."].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "3px 4px", fontSize: 9 }}>{h}</th>)}</tr></thead>
-                      <tbody>
-                        {networkSummary.map((n) => (
-                          <tr key={n.network} onMouseEnter={(e) => hoverRow(e, true)} onMouseLeave={(e) => hoverRow(e, false)}>
-                            <td style={{ ...TD_STYLE, padding: "3px 4px" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <div style={{ width: 6, height: 6, borderRadius: "50%", background: NET_COLOR[n.network] ?? "var(--gray-400)", flexShrink: 0 }} />
-                                <span>{NET_LABEL[n.network] ?? n.network}</span>
+                    {/* Horizontal proportional bar */}
+                    {totalCost > 0 && (
+                      <div style={{ marginBottom: 10 }}>
+                        <p style={{ fontSize: 9, color: "var(--gray-400)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Distribusi Biaya</p>
+                        <div style={{ display: "flex", height: 16, borderRadius: 4, overflow: "hidden", gap: 1 }}>
+                          {activeNets.map((n) => {
+                            const pctVal = totalCost > 0 ? (n.cost_idr / totalCost) * 100 : 0;
+                            if (pctVal < 1) return null;
+                            return (
+                              <div key={n.network} title={`${NET_LABEL[n.network] ?? n.network}: ${idr(n.cost_idr)} (${pctVal.toFixed(1)}%)`}
+                                style={{ flex: pctVal, background: NET_COLOR[n.network] ?? "var(--gray-300)", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 20 }}>
+                                {pctVal > 12 && <span style={{ fontSize: 8, color: "#fff", fontWeight: 700 }}>{pctVal.toFixed(0)}%</span>}
                               </div>
-                            </td>
-                            <td style={{ ...TD_STYLE, padding: "3px 4px", color: "#BB2649", fontWeight: 600 }}>{idr(n.cost_idr)}</td>
-                            <td style={{ ...TD_STYLE, padding: "3px 4px" }}>{num(n.clicks)}</td>
-                            <td style={{ ...TD_STYLE, padding: "3px 4px", color: n.conversions > 0 ? "#16A34A" : "var(--gray-400)" }}>{n.conversions > 0 ? n.conversions.toFixed(1) : "—"}</td>
-                          </tr>
-                        ))}
+                            );
+                          })}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "3px 8px", marginTop: 5 }}>
+                          {activeNets.map((n) => (
+                            <div key={n.network} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                              <div style={{ width: 8, height: 8, borderRadius: 2, background: NET_COLOR[n.network] ?? "var(--gray-300)", flexShrink: 0 }} />
+                              <span style={{ fontSize: 9, color: "var(--gray-600)" }}>{NET_LABEL[n.network] ?? n.network}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Tabel detail */}
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                      <thead><tr>{["Jaringan","Biaya","% Biaya","Klik","CTR","Konv."].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "3px 4px", fontSize: 9 }}>{h}</th>)}</tr></thead>
+                      <tbody>
+                        {activeNets.map((n) => {
+                          const pctCost = totalCost > 0 ? (n.cost_idr / totalCost) * 100 : 0;
+                          const ctr = totalClicks > 0 ? (n.clicks / n.impressions) * 100 : 0;
+                          return (
+                            <tr key={n.network} onMouseEnter={(e) => hoverRow(e, true)} onMouseLeave={(e) => hoverRow(e, false)}>
+                              <td style={{ ...TD_STYLE, padding: "3px 4px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                  <div style={{ width: 8, height: 8, borderRadius: 2, background: NET_COLOR[n.network] ?? "var(--gray-300)", flexShrink: 0 }} />
+                                  <span style={{ fontSize: 10 }}>{NET_LABEL[n.network] ?? n.network}</span>
+                                </div>
+                              </td>
+                              <td style={{ ...TD_STYLE, padding: "3px 4px", color: "#BB2649", fontWeight: 600, whiteSpace: "nowrap" }}>{idr(n.cost_idr)}</td>
+                              <td style={{ ...TD_STYLE, padding: "3px 4px", color: "var(--gray-500)" }}>{pctCost.toFixed(1)}%</td>
+                              <td style={{ ...TD_STYLE, padding: "3px 4px" }}>{num(n.clicks)}</td>
+                              <td style={{ ...TD_STYLE, padding: "3px 4px" }}>{n.impressions > 0 ? pct(ctr) : "—"}</td>
+                              <td style={{ ...TD_STYLE, padding: "3px 4px", color: n.conversions > 0 ? "#16A34A" : "var(--gray-400)", fontWeight: n.conversions > 0 ? 600 : 400 }}>{n.conversions > 0 ? n.conversions.toFixed(1) : "—"}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
+                    <p style={{ fontSize: 9, color: "var(--gray-400)", marginTop: 6, borderTop: "1px solid var(--gray-100)", paddingTop: 4 }}>
+                      Total: <strong style={{ color: "#BB2649" }}>{idr(totalCost)}</strong> · {num(totalClicks)} klik
+                    </p>
                   </div>
                 );
                })()}
