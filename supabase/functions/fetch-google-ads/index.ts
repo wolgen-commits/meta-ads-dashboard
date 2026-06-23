@@ -601,24 +601,33 @@ async function syncLocationTargeting(sb: any, tok: string) {
 
 // deno-lint-ignore no-explicit-any
 async function syncAuctionInsights(sb: any, tok: string, ds: string, de: string) {
-  const rows = await runGaql(tok, `
-    SELECT
-      auction_insight.domain,
-      campaign.id, segments.date,
-      metrics.auction_insight_search_impression_share,
-      metrics.auction_insight_search_outranking_share,
-      metrics.auction_insight_search_overlap_rate,
-      metrics.auction_insight_search_position_above_rate,
-      metrics.auction_insight_search_top_impression_percentage,
-      metrics.auction_insight_search_absolute_top_impression_percentage
-    FROM auction_insight
-    WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
-  `);
+  // Auction insight data hanya tersedia jika akun punya Search campaigns aktif
+  // Field domain diakses dari resource auction_insight
+  let rows: Record<string, unknown>[];
+  try {
+    rows = await runGaql(tok, `
+      SELECT
+        auction_insight.domain,
+        campaign.id, segments.date,
+        metrics.auction_insight_search_impression_share,
+        metrics.auction_insight_search_outranking_share,
+        metrics.auction_insight_search_overlap_rate,
+        metrics.auction_insight_search_position_above_rate,
+        metrics.auction_insight_search_top_impression_percentage,
+        metrics.auction_insight_search_absolute_top_impression_percentage
+      FROM auction_insight
+      WHERE segments.date BETWEEN '${ds}' AND '${de}'
+        AND campaign.status != 'REMOVED'
+    `);
+  } catch (e) {
+    // Tidak ada auction insight data (bukan Search campaign atau belum ada data)
+    console.log("syncAuctionInsights skipped:", String(e));
+    return { auction_insight_rows: 0 };
+  }
 
   const rawMapped = rows.map((row) => {
-    const ai = row.auctionInsight as Record<string, unknown>;
-    const c  = row.campaign, s = row.segments, m = row.metrics;
+    const ai = (row.auctionInsight ?? {}) as Record<string, unknown>;
+    const c = row.campaign, s = row.segments, m = row.metrics;
     const cId   = String(c.id);
     const domain = String(ai.domain ?? "unknown");
     return {
@@ -681,7 +690,7 @@ async function syncAssets(sb: any, tok: string) {
   const rows = await runGaql(tok, `
     SELECT
       ad_group_ad_asset_view.ad_group_ad,
-      ad_group_ad_asset_view.asset_field_type,
+      ad_group_ad_asset_view.field_type,
       ad_group_ad_asset_view.performance_label,
       asset.text_asset.text,
       ad_group.id, campaign.id,
@@ -702,7 +711,7 @@ async function syncAssets(sb: any, tok: string) {
     const text_a = (asset.textAsset ?? {}) as Record<string, unknown>;
     const ag = row.adGroup, c = row.campaign, m = row.metrics;
     const adId       = extractId(view.adGroupAd);
-    const fieldType  = String(view.assetFieldType ?? "UNKNOWN");
+    const fieldType  = String(view.fieldType ?? "UNKNOWN");
     const label      = String(view.performanceLabel ?? "UNRATED");
     const assetText  = String(text_a.text ?? "");
     const key        = `${adId}_${fieldType}_${assetText.slice(0, 50)}`;
