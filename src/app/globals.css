@@ -583,9 +583,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: nowrap;
   gap: 8px;
   margin-bottom: 12px;
-  flex-wrap: wrap;
 }
 
 /* ── ENGAGEMENT TABS ── */

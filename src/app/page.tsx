@@ -9,7 +9,7 @@ import { RegionChart }        from "@/components/RegionChart";
 import { PlatformMediaChart } from "@/components/PlatformMediaChart";
 import { InstagramTab }       from "@/components/InstagramTab";
 import { DatabaseTab }        from "@/components/DatabaseTab";
-import { MetaAdLibraryTab }   from "@/components/MetaAdLibraryTab";
+
 import { CompetitorAdsTab }   from "@/components/CompetitorAdsTab";
 import { GoogleAdsTab }          from "@/components/GoogleAdsTab";
 import { WebsiteAnalyticsTab }   from "@/components/WebsiteAnalyticsTab";
@@ -110,7 +110,7 @@ function MultiSelectFilter({
 }
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database" | "ad-library" | "competitor-ads" | "google" | "website">("ads");
+  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database" | "competitor-ads" | "google" | "website">("ads");
   const [dateStart, setDateStart] = useState(isoDate(-29));
   const [dateStop,  setDateStop]  = useState(isoDate(0));
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
@@ -237,9 +237,7 @@ export default function DashboardPage() {
         <button className={`tab-btn ${activeTab === "database" ? "active" : ""}`} onClick={() => setActiveTab("database")}>
           Database
         </button>
-        <button className={`tab-btn ${activeTab === "ad-library" ? "active" : ""}`} onClick={() => setActiveTab("ad-library")}>
-          Ad Library
-        </button>
+
         <button className={`tab-btn ${activeTab === "competitor-ads" ? "active" : ""}`} onClick={() => setActiveTab("competitor-ads")}>
           Competitor Ads
         </button>
@@ -335,7 +333,7 @@ export default function DashboardPage() {
 
       {activeTab === "instagram"      && <InstagramTab />}
       {activeTab === "database"       && <DatabaseTab />}
-      {activeTab === "ad-library"     && <MetaAdLibraryTab />}
+
       {activeTab === "competitor-ads" && <CompetitorAdsTab />}
       {activeTab === "google"         && <GoogleAdsTab />}
       {activeTab === "website"        && <WebsiteAnalyticsTab />}

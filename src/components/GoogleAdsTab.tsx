@@ -376,8 +376,8 @@ export function GoogleAdsTab() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, alignItems: "start" }}>
 
             {/* ── Col A: Chart + Campaign table ── */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div className="chart-card" style={{ padding: "10px 14px" }}>
+            <div style={{ display: "contents" }}>
+              <div className="chart-card" style={{ padding: "10px 14px", order: 1, height: "300px", overflow: "hidden" }}>
                 <div className="chart-header-row">
                   <div>
                     <h3 className="chart-title" style={{ marginBottom: 2 }}>Pengeluaran & Klik Harian</h3>
@@ -405,7 +405,7 @@ export function GoogleAdsTab() {
                 )}
               </div>
 
-              <div className="chart-card" style={{ padding: "10px 14px" }}>
+              <div className="chart-card" style={{ padding: "10px 14px", order: 4, height: "300px", overflow: "hidden" }}>
                 <div className="chart-header-row">
                   <div>
                     <h3 className="chart-title" style={{ marginBottom: 2 }}>Performa Campaign</h3>
@@ -450,8 +450,8 @@ export function GoogleAdsTab() {
             </div>
 
             {/* ── Col B: Audiens + Wilayah & Jadwal ── */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div className="chart-card" style={{ padding: "10px 14px" }}>
+            <div style={{ display: "contents" }}>
+              <div className="chart-card" style={{ padding: "10px 14px", order: 2, height: "300px", overflow: "hidden" }}>
                 <div className="chart-header-row">
                   <div>
                     <h3 className="chart-title" style={{ marginBottom: 2 }}>Audiens</h3>
@@ -530,7 +530,7 @@ export function GoogleAdsTab() {
                 )}
               </div>
 
-              <div className="chart-card" style={{ padding: "10px 14px" }}>
+              <div className="chart-card" style={{ padding: "10px 14px", order: 5, height: "300px", overflow: "hidden" }}>
                 <div className="chart-header-row">
                   <div>
                     <h3 className="chart-title" style={{ marginBottom: 2 }}>Wilayah & Jadwal</h3>
@@ -620,10 +620,10 @@ export function GoogleAdsTab() {
             </div>
 
             {/* ── Col C: Kata Kunci & Kueri + Ad Group & Iklan ── */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "contents" }}>
 
               {/* Card 1: Kata Kunci & Kueri */}
-              <div className="chart-card" style={{ padding: "10px 14px" }}>
+              <div className="chart-card" style={{ padding: "10px 14px", order: 3, height: "300px", overflow: "hidden" }}>
                 <div className="chart-header-row">
                   <div>
                     <h3 className="chart-title" style={{ marginBottom: 2 }}>Kata Kunci & Kueri</h3>
@@ -639,10 +639,10 @@ export function GoogleAdsTab() {
                     ))}
                   </div>
                 </div>
-                <div style={{ overflowY: "auto", maxHeight: 220 }}>
-                  {adsKwTab1 === "keywords" && (
-                    kwLoading ? <Empty msg="Memuat…" /> :
-                    keywordSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=keywords." /> : (
+                {adsKwTab1 === "keywords" && (
+                  kwLoading ? <Empty msg="Memuat…" /> :
+                  keywordSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=keywords." /> : (
+                    <div style={{ overflowY: "auto", maxHeight: 220 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                         <thead><tr>{["Kata Kunci","Type","QS","Impresi","Klik","CTR","Biaya"].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "4px 6px", fontSize: 10 }}>{h}</th>)}</tr></thead>
                         <tbody>
@@ -663,11 +663,13 @@ export function GoogleAdsTab() {
                           })}
                         </tbody>
                       </table>
-                    )
-                  )}
-                  {adsKwTab1 === "search_terms" && (
-                    stLoading ? <Empty msg="Memuat…" /> :
-                    stSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=search_terms." /> : (
+                    </div>
+                  )
+                )}
+                {adsKwTab1 === "search_terms" && (
+                  stLoading ? <Empty msg="Memuat…" /> :
+                  stSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=search_terms." /> : (
+                    <div style={{ overflowY: "auto", maxHeight: 220 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                         <thead><tr>{["Kueri Penelusuran","St.","Impresi","Klik","CTR","Biaya"].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "4px 6px", fontSize: 10 }}>{h}</th>)}</tr></thead>
                         <tbody>
@@ -686,13 +688,13 @@ export function GoogleAdsTab() {
                           })}
                         </tbody>
                       </table>
-                    )
-                  )}
-                </div>
+                    </div>
+                  )
+                )}
               </div>
 
               {/* Card 2: Ad Group & Iklan */}
-              <div className="chart-card" style={{ padding: "10px 14px" }}>
+              <div className="chart-card" style={{ padding: "10px 14px", order: 6, height: "300px", overflow: "hidden" }}>
                 <div className="chart-header-row">
                   <div>
                     <h3 className="chart-title" style={{ marginBottom: 2 }}>Ad Group & Iklan</h3>
@@ -708,10 +710,10 @@ export function GoogleAdsTab() {
                     ))}
                   </div>
                 </div>
-                <div style={{ overflowY: "auto", maxHeight: 220 }}>
-                  {adsKwTab2 === "adgroups" && (
-                    agLoading ? <Empty msg="Memuat…" /> :
-                    adgroupSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=adgroup_perf." /> : (
+                {adsKwTab2 === "adgroups" && (
+                  agLoading ? <Empty msg="Memuat…" /> :
+                  adgroupSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=adgroup_perf." /> : (
+                    <div style={{ overflowY: "auto", maxHeight: 220 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                         <thead><tr>{["Ad Group","Campaign","Impresi","Klik","Biaya","Konv."].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "4px 6px", fontSize: 10 }}>{h}</th>)}</tr></thead>
                         <tbody>
@@ -727,45 +729,47 @@ export function GoogleAdsTab() {
                           ))}
                         </tbody>
                       </table>
-                    )
-                  )}
-                  {adsKwTab2 === "ads" && (
-                    <div>
-                      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-                        {([{ k: "kreatif" as const, l: "Kreatif" }, { k: "performa" as const, l: "Performa" }]).map(({ k, l }) => (
-                          <button key={k} onClick={() => setAdsIklanView(k)} style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: adsIklanView === k ? 600 : 400, cursor: "pointer", border: adsIklanView === k ? "1px solid #2563EB" : "1px solid var(--gray-200)", background: adsIklanView === k ? "#2563EB" : "transparent", color: adsIklanView === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
-                        ))}
-                      </div>
-                      {adsIklanView === "kreatif" && (
-                        adsLoading ? <Empty msg="Memuat…" /> :
-                        adsError ? <Empty msg={`Error: ${String(adsError?.message ?? adsError)}`} /> :
-                        !adsList || adsList.length === 0 ? <Empty msg="Belum ada data iklan. Jalankan fetch-google-ads type=ads." /> : (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            {adsList.slice(0, 20).map((ad) => {
-                              const campName = allCampaigns?.find((c) => c.id === ad.campaign_id)?.name ?? ad.campaign_id;
-                              const adType = (ad.type ?? "").replace("RESPONSIVE_SEARCH_AD","RSA").replace("EXPANDED_TEXT_AD","ETA").replace("EXPANDED_DYNAMIC_SEARCH_AD","DSA") || "Ad";
-                              return (
-                                <div key={ad.id} style={{ border: "1px solid var(--gray-200)", borderRadius: 6, padding: "8px 10px" }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                                    <span style={{ fontSize: 9, fontWeight: 600, color: "var(--gray-400)", textTransform: "uppercase" }}>{adType}</span>
-                                    <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: ad.status === "ENABLED" ? "#F0FDF4" : "#FEF2F2", color: ad.status === "ENABLED" ? "#15803D" : "#B91C1C", fontWeight: 600 }}>{ad.status === "ENABLED" ? "Aktif" : ad.status ?? "—"}</span>
-                                  </div>
-                                  {ad.headlines.length > 0
-                                    ? ad.headlines.slice(0,2).map((h, i) => <p key={i} style={{ fontSize: 12, fontWeight: 600, color: "#1D4ED8", margin: "1px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h}</p>)
-                                    : <p style={{ fontSize: 12, color: "var(--gray-400)", fontStyle: "italic", margin: "1px 0" }}>{ad.name ?? "(tanpa judul)"}</p>}
-                                  {ad.descriptions.slice(0,1).map((d, i) => <p key={i} style={{ fontSize: 11, color: "var(--gray-600)", margin: "2px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d}</p>)}
-                                  {ad.final_urls?.[0] && <p style={{ fontSize: 10, color: "#16A34A", margin: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.final_urls[0]}</p>}
-                                  <p style={{ fontSize: 9, color: "var(--gray-400)", marginTop: 4, borderTop: "1px solid var(--gray-100)", paddingTop: 3 }}>{campName}</p>
+                    </div>
+                  )
+                )}
+                {adsKwTab2 === "ads" && (
+                  <div>
+                    <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                      {([{ k: "kreatif" as const, l: "Kreatif" }, { k: "performa" as const, l: "Performa" }]).map(({ k, l }) => (
+                        <button key={k} onClick={() => setAdsIklanView(k)} style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: adsIklanView === k ? 600 : 400, cursor: "pointer", border: adsIklanView === k ? "1px solid #2563EB" : "1px solid var(--gray-200)", background: adsIklanView === k ? "#2563EB" : "transparent", color: adsIklanView === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
+                      ))}
+                    </div>
+                    {adsIklanView === "kreatif" && (
+                      adsLoading ? <Empty msg="Memuat…" /> :
+                      adsError ? <Empty msg={`Error: ${String(adsError?.message ?? adsError)}`} /> :
+                      !adsList || adsList.length === 0 ? <Empty msg="Belum ada data iklan. Jalankan fetch-google-ads type=ads." /> : (
+                        <div style={{ overflowY: "auto", maxHeight: 220, display: "flex", flexDirection: "column", gap: 8 }}>
+                          {adsList.slice(0, 20).map((ad) => {
+                            const campName = allCampaigns?.find((c) => c.id === ad.campaign_id)?.name ?? ad.campaign_id;
+                            const adType = (ad.type ?? "").replace("RESPONSIVE_SEARCH_AD","RSA").replace("EXPANDED_TEXT_AD","ETA").replace("EXPANDED_DYNAMIC_SEARCH_AD","DSA") || "Ad";
+                            return (
+                              <div key={ad.id} style={{ border: "1px solid var(--gray-200)", borderRadius: 6, padding: "8px 10px", flexShrink: 0 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                                  <span style={{ fontSize: 9, fontWeight: 600, color: "var(--gray-400)", textTransform: "uppercase" }}>{adType}</span>
+                                  <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: ad.status === "ENABLED" ? "#F0FDF4" : "#FEF2F2", color: ad.status === "ENABLED" ? "#15803D" : "#B91C1C", fontWeight: 600 }}>{ad.status === "ENABLED" ? "Aktif" : ad.status ?? "—"}</span>
                                 </div>
-                              );
-                            })}
-                            {adsList.length > 20 && <p style={{ fontSize: 10, color: "var(--gray-400)", textAlign: "center", padding: "4px 0" }}>Menampilkan 20 dari {adsList.length} iklan</p>}
-                          </div>
-                        )
-                      )}
-                      {adsIklanView === "performa" && (
-                        adPerfLoading ? <Empty msg="Memuat…" /> :
-                        adPerfSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=ad_perf_daily atau type=extended." /> : (
+                                {ad.headlines.length > 0
+                                  ? ad.headlines.slice(0,2).map((h, i) => <p key={i} style={{ fontSize: 12, fontWeight: 600, color: "#1D4ED8", margin: "1px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h}</p>)
+                                  : <p style={{ fontSize: 12, color: "var(--gray-400)", fontStyle: "italic", margin: "1px 0" }}>{ad.name ?? "(tanpa judul)"}</p>}
+                                {ad.descriptions.slice(0,1).map((d, i) => <p key={i} style={{ fontSize: 11, color: "var(--gray-600)", margin: "2px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d}</p>)}
+                                {ad.final_urls?.[0] && <p style={{ fontSize: 10, color: "#16A34A", margin: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.final_urls[0]}</p>}
+                                <p style={{ fontSize: 9, color: "var(--gray-400)", marginTop: 4, borderTop: "1px solid var(--gray-100)", paddingTop: 3 }}>{campName}</p>
+                              </div>
+                            );
+                          })}
+                          {adsList.length > 20 && <p style={{ fontSize: 10, color: "var(--gray-400)", textAlign: "center", padding: "4px 0", flexShrink: 0 }}>Menampilkan 20 dari {adsList.length} iklan</p>}
+                        </div>
+                      )
+                    )}
+                    {adsIklanView === "performa" && (
+                      adPerfLoading ? <Empty msg="Memuat…" /> :
+                      adPerfSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=ad_perf_daily atau type=extended." /> : (
+                        <div style={{ overflowY: "auto", maxHeight: 220 }}>
                           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                             <thead><tr>{["Iklan","Tipe","Impresi","Klik","Biaya","Konv."].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "4px 6px", fontSize: 10 }}>{h}</th>)}</tr></thead>
                             <tbody>
@@ -781,11 +785,11 @@ export function GoogleAdsTab() {
                               ))}
                             </tbody>
                           </table>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
               </div>
 
             </div>
@@ -796,7 +800,7 @@ export function GoogleAdsTab() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
 
             {/* Jenis Konversi */}
-            <div className="chart-card" style={{ padding: "10px 14px" }}>
+            <div className="chart-card" style={{ padding: "10px 14px", height: "300px", overflow: "hidden" }}>
               <div className="chart-header-row" style={{ marginBottom: 8 }}>
                 <div>
                   <h3 className="chart-title">Jenis Konversi</h3>
@@ -838,7 +842,7 @@ export function GoogleAdsTab() {
             </div>
 
             {/* Platform & Jaringan */}
-            <div className="chart-card" style={{ padding: "10px 14px" }}>
+            <div className="chart-card" style={{ padding: "10px 14px", height: "300px", overflow: "hidden" }}>
               <div className="chart-header-row" style={{ marginBottom: 8 }}>
                 <div>
                   <h3 className="chart-title">Platform & Jaringan</h3>
@@ -914,7 +918,7 @@ export function GoogleAdsTab() {
             </div>
 
             {/* Landing Page */}
-            <div className="chart-card" style={{ padding: "10px 14px" }}>
+            <div className="chart-card" style={{ padding: "10px 14px", height: "300px", overflow: "hidden" }}>
               <div className="chart-header-row" style={{ marginBottom: 8 }}>
                 <div>
                   <h3 className="chart-title">Performa Landing Page</h3>
@@ -923,7 +927,7 @@ export function GoogleAdsTab() {
               </div>
               {lpLoading ? <Empty msg="Memuat…" /> :
                !lpSummary || lpSummary.length === 0 ? <Empty msg="Jalankan type=landing_pages atau type=extended." /> : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, overflowY: "auto", maxHeight: 210 }}>
                   {lpSummary.slice(0, 8).map((lp) => {
                     const score = lp.speed_score ?? 0;
                     const color = score >= 80 ? "#16A34A" : score >= 50 ? "#D97706" : "#B91C1C";
