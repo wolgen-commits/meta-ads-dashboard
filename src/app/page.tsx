@@ -11,7 +11,8 @@ import { InstagramTab }       from "@/components/InstagramTab";
 import { DatabaseTab }        from "@/components/DatabaseTab";
 import { MetaAdLibraryTab }   from "@/components/MetaAdLibraryTab";
 import { CompetitorAdsTab }   from "@/components/CompetitorAdsTab";
-import { GoogleAdsTab }       from "@/components/GoogleAdsTab";
+import { GoogleAdsTab }          from "@/components/GoogleAdsTab";
+import { WebsiteAnalyticsTab }   from "@/components/WebsiteAnalyticsTab";
 import { useKpiTotals, useCampaignList, useAdsetList, useAdList } from "@/hooks/useMetaData";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -109,7 +110,7 @@ function MultiSelectFilter({
 }
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database" | "ad-library" | "competitor-ads" | "google">("ads");
+  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database" | "ad-library" | "competitor-ads" | "google" | "website">("ads");
   const [dateStart, setDateStart] = useState(isoDate(-29));
   const [dateStop,  setDateStop]  = useState(isoDate(0));
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
@@ -245,6 +246,9 @@ export default function DashboardPage() {
         <button className={`tab-btn ${activeTab === "google" ? "active" : ""}`} onClick={() => setActiveTab("google")}>
           Google Ads
         </button>
+        <button className={`tab-btn ${activeTab === "website" ? "active" : ""}`} onClick={() => setActiveTab("website")}>
+          Website Analytics
+        </button>
       </div>
 
       {/* ── Meta Ads Tab ── */}
@@ -334,6 +338,7 @@ export default function DashboardPage() {
       {activeTab === "ad-library"     && <MetaAdLibraryTab />}
       {activeTab === "competitor-ads" && <CompetitorAdsTab />}
       {activeTab === "google"         && <GoogleAdsTab />}
+      {activeTab === "website"        && <WebsiteAnalyticsTab />}
     </div>
   );
 }
