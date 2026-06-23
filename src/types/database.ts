@@ -165,3 +165,350 @@ export interface CompetitorAdsSummary {
   ads_per_competitor: Record<string, number>;
   average_strength_score: number;
 }
+
+// ── Google Ads ────────────────────────────────────────────────────────────────
+
+export interface GoogleCampaign {
+  id: string;
+  customer_id: string;
+  name: string;
+  status: string | null;
+  advertising_channel_type: string | null;
+  synced_at: string;
+}
+
+export interface GoogleAdPerformance {
+  id: string;
+  campaign_id: string;
+  customer_id: string;
+  date: string;
+  impressions: number;
+  clicks: number;
+  cost_micros: number;
+  conversions: number;
+  conversions_value: number;
+  ctr: number;
+  average_cpc: number;
+  cost_per_conversion: number;
+  synced_at: string;
+}
+
+// Row dari view v_google_adperf_daily — biaya sudah dalam IDR
+export interface GoogleAdPerfDaily {
+  campaign_id: string;
+  campaign_name: string;
+  campaign_status: string | null;
+  advertising_channel_type: string | null;
+  date: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  conversions_value: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+  cost_per_conversion_idr: number;
+}
+
+// ── Google Analytics 4 ────────────────────────────────────────────────────────
+
+export interface Ga4WebsiteDaily {
+  id: string;
+  property_id: string;
+  date: string;
+  source: string;
+  medium: string;
+  sessions: number;
+  users: number;
+  new_users: number;
+  bounce_rate: number;
+  engagement_rate: number;
+  avg_session_duration: number;
+  conversions: number;
+  synced_at: string;
+}
+
+// Row dari view v_ga4_traffic_summary — rate sudah dalam %
+export interface Ga4TrafficSummary {
+  date: string;
+  source: string;
+  medium: string;
+  channel_group: string;
+  sessions: number;
+  users: number;
+  new_users: number;
+  bounce_rate_pct: number;
+  engagement_rate_pct: number;
+  avg_session_duration_sec: number;
+  conversions: number;
+}
+
+export interface Ga4Demographics {
+  id: string;
+  property_id: string;
+  date: string;
+  age_group: string;
+  gender: string;
+  sessions: number;
+  users: number;
+  new_users: number;
+  conversions: number;
+}
+
+export interface Ga4Platform {
+  id: string;
+  property_id: string;
+  date: string;
+  device_category: string;
+  operating_system: string;
+  browser: string;
+  sessions: number;
+  users: number;
+  conversions: number;
+}
+
+export interface Ga4LandingPage {
+  id: string;
+  property_id: string;
+  date: string;
+  landing_page: string;
+  sessions: number;
+  users: number;
+  bounce_rate: number;
+  engagement_rate: number;
+  avg_session_duration: number;
+  conversions: number;
+}
+
+export interface Ga4Page {
+  id: string;
+  property_id: string;
+  date: string;
+  page_path: string;
+  page_title: string;
+  screen_page_views: number;
+  users: number;
+  engagement_duration: number;
+}
+
+export interface Ga4Geography {
+  id: string;
+  property_id: string;
+  date: string;
+  country: string;
+  city: string;
+  sessions: number;
+  users: number;
+  new_users: number;
+  conversions: number;
+}
+
+export interface Ga4SearchTerm {
+  id: string;
+  property_id: string;
+  date: string;
+  search_term: string;
+  sessions: number;
+  users: number;
+  conversions: number;
+}
+
+export interface Ga4SearchConsole {
+  id: string;
+  property_id: string;
+  date: string;
+  query: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
+// ── Google Ads expanded ────────────────────────────────────────────────────────
+
+export interface GoogleAdGroup {
+  id: string;
+  campaign_id: string;
+  customer_id: string;
+  name: string;
+  status: string | null;
+  type: string | null;
+  cpc_bid_micros: number;
+  synced_at: string;
+}
+
+export interface GoogleAd {
+  id: string;
+  adgroup_id: string;
+  campaign_id: string;
+  customer_id: string;
+  name: string | null;
+  status: string | null;
+  type: string | null;
+  final_urls: string[];
+  headlines: string[];
+  descriptions: string[];
+  synced_at: string;
+}
+
+export interface GoogleAdGroupPerfDaily {
+  adgroup_id: string;
+  adgroup_name: string;
+  adgroup_status: string | null;
+  campaign_id: string;
+  campaign_name: string;
+  advertising_channel_type: string | null;
+  date: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+  cost_per_conversion_idr: number;
+}
+
+export interface GoogleKeywordPerfDaily {
+  criterion_id: string;
+  keyword_text: string;
+  match_type: string | null;
+  keyword_status: string | null;
+  quality_score: number | null;
+  adgroup_id: string;
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
+
+export interface GoogleSearchTermPerfDaily {
+  id: string;
+  search_term: string;
+  status: string | null;
+  campaign_id: string;
+  campaign_name: string;
+  adgroup_id: string | null;
+  date: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
+
+export interface GooglePerfDeviceDaily {
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  device: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
+
+export interface GooglePerfAgeDaily {
+  id: string;
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  age_range: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
+
+export interface GooglePerfGenderDaily {
+  id: string;
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  gender: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
+
+export interface GooglePerfGeoDaily {
+  id: string;
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  country_criterion_id: string;
+  location_type: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
+
+export interface GooglePerfHourDaily {
+  id: string;
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  hour: number;
+  day_of_week: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
+
+export interface GoogleGeoTarget {
+  criterion_id: string;
+  name: string;
+  canonical_name: string | null;
+  country_code: string | null;
+  target_type: string | null;
+}
+
+export interface GoogleLocationTargeting {
+  id: string;
+  campaign_id: string;
+  campaign_name: string;
+  criterion_id: string;
+  location_name: string;
+  canonical_name: string | null;
+  target_type: string | null;
+  country_code: string | null;
+  status: string | null;
+  is_negative: boolean;
+  bid_modifier: number;
+}
+
+export interface GooglePerfCityDaily {
+  id: string;
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  city_criterion_id: string | null;
+  city_name: string;
+  city_canonical: string | null;
+  region_criterion_id: string | null;
+  region_name: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
