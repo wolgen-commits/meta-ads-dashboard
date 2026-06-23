@@ -6,6 +6,8 @@ import type {
   GoogleAdGroupPerfDaily, GoogleKeywordPerfDaily, GoogleSearchTermPerfDaily, GooglePerfDeviceDaily,
   GooglePerfAgeDaily, GooglePerfGenderDaily, GooglePerfGeoDaily, GooglePerfHourDaily,
   GooglePerfCityDaily, GoogleLocationTargeting,
+  GoogleAuctionInsight, GoogleAdPerfDailyRow, GoogleAssetPerformance,
+  GoogleConversionAction, GooglePerfNetwork, GoogleLandingPage,
   Ga4TrafficSummary,
   Ga4Demographics, Ga4Platform, Ga4LandingPage, Ga4Page, Ga4Geography, Ga4SearchTerm, Ga4SearchConsole,
 } from "@/types/database";
@@ -528,6 +530,253 @@ export function useGoogleCitySummary(dateStart: string, dateStop: string, campai
     return Object.values(agg).sort((a, b) => b.impressions - a.impressions);
   }, [data, groupBy]);
   return { summary, isLoading };
+}
+
+// ── Auction Insights ─────────────────────────────────────────────────────────
+
+export function useGoogleAuctionInsights(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const sorted = [...campaignIds].sort();
+  return useSWR<GoogleAuctionInsight[]>(
+    ["google_auction_insights", dateStart, dateStop, sorted.join(",")],
+    async () => {
+      let q = supabase.from("v_google_auction_insights").select("*").gte("date", dateStart).lte("date", dateStop);
+      if (sorted.length > 0) q = q.in("campaign_id", sorted);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as GoogleAuctionInsight[];
+    },
+    { refreshInterval: REVALIDATE }
+  );
+}
+
+export function useGoogleAuctionInsightsSummary(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const { data, isLoading } = useGoogleAuctionInsights(dateStart, dateStop, campaignIds);
+  const summary = useMemo(() => {
+    if (!data) return [];
+    const agg: Record<string, { domain: string; impression_share_pct: number; outranking_share_pct: number; overlap_rate_pct: number; top_of_page_rate_pct: number; abs_top_of_page_rate_pct: number; count: number }> = {};
+    for (const r of data) {
+      if (!agg[r.domain]) agg[r.domain] = { domain: r.domain, impression_share_pct: 0, outranking_share_pct: 0, overlap_rate_pct: 0, top_of_page_rate_pct: 0, abs_top_of_page_rate_pct: 0, count: 0 };
+      agg[r.domain].impression_share_pct     += r.impression_share_pct ?? 0;
+      agg[r.domain].outranking_share_pct     += r.outranking_share_pct ?? 0;
+      agg[r.domain].overlap_rate_pct         += r.overlap_rate_pct ?? 0;
+      agg[r.domain].top_of_page_rate_pct     += r.top_of_page_rate_pct ?? 0;
+      agg[r.domain].abs_top_of_page_rate_pct += r.abs_top_of_page_rate_pct ?? 0;
+      agg[r.domain].count++;
+    }
+    return Object.values(agg).map((r) => ({
+      ...r,
+      impression_share_pct:     r.count > 0 ? r.impression_share_pct / r.count : 0,
+      outranking_share_pct:     r.count > 0 ? r.outranking_share_pct / r.count : 0,
+      overlap_rate_pct:         r.count > 0 ? r.overlap_rate_pct / r.count : 0,
+      top_of_page_rate_pct:     r.count > 0 ? r.top_of_page_rate_pct / r.count : 0,
+      abs_top_of_page_rate_pct: r.count > 0 ? r.abs_top_of_page_rate_pct / r.count : 0,
+    })).sort((a, b) => b.impression_share_pct - a.impression_share_pct);
+  }, [data]);
+  return { summary, isLoading };
+}
+
+// ── Ad-level daily performance ────────────────────────────────────────────────
+
+export function useGoogleAdPerfDaily(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const sorted = [...campaignIds].sort();
+  return useSWR<GoogleAdPerfDailyRow[]>(
+    ["google_ad_perf_daily", dateStart, dateStop, sorted.join(",")],
+    async () => {
+      let q = supabase.from("v_google_ad_perf_daily").select("*").gte("date", dateStart).lte("date", dateStop);
+      if (sorted.length > 0) q = q.in("campaign_id", sorted);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as GoogleAdPerfDailyRow[];
+    },
+    { refreshInterval: REVALIDATE }
+  );
+}
+
+export function useGoogleAdPerfDailySummary(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const { data, isLoading } = useGoogleAdPerfDaily(dateStart, dateStop, campaignIds);
+  const summary = useMemo(() => {
+    if (!data) return [];
+    const agg: Record<string, { ad_id: string; ad_name: string; ad_type: string | null; ad_status: string | null; headlines: string[]; campaign_name: string; impressions: number; clicks: number; cost_idr: number; conversions: number }> = {};
+    for (const r of data) {
+      if (!agg[r.ad_id]) agg[r.ad_id] = { ad_id: r.ad_id, ad_name: r.ad_name, ad_type: r.ad_type, ad_status: r.ad_status, headlines: r.headlines ?? [], campaign_name: r.campaign_name, impressions: 0, clicks: 0, cost_idr: 0, conversions: 0 };
+      agg[r.ad_id].impressions  += r.impressions;
+      agg[r.ad_id].clicks       += r.clicks;
+      agg[r.ad_id].cost_idr     += r.cost_idr;
+      agg[r.ad_id].conversions  += r.conversions;
+    }
+    return Object.values(agg).sort((a, b) => b.cost_idr - a.cost_idr);
+  }, [data]);
+  return { summary, isLoading };
+}
+
+// ── Asset performance ─────────────────────────────────────────────────────────
+
+export function useGoogleAssets(campaignIds: string[] = []) {
+  const sorted = [...campaignIds].sort();
+  return useSWR<GoogleAssetPerformance[]>(
+    ["google_asset_performance", sorted.join(",")],
+    async () => {
+      let q = supabase.from("v_google_asset_performance").select("*");
+      if (sorted.length > 0) q = q.in("campaign_id", sorted);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as GoogleAssetPerformance[];
+    },
+    { refreshInterval: REVALIDATE }
+  );
+}
+
+// ── Conversion actions breakdown ──────────────────────────────────────────────
+
+export function useGoogleConversionActions(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const sorted = [...campaignIds].sort();
+  return useSWR<GoogleConversionAction[]>(
+    ["google_conversion_actions", dateStart, dateStop, sorted.join(",")],
+    async () => {
+      let q = supabase.from("v_google_conversion_actions").select("*").gte("date", dateStart).lte("date", dateStop);
+      if (sorted.length > 0) q = q.in("campaign_id", sorted);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as GoogleConversionAction[];
+    },
+    { refreshInterval: REVALIDATE }
+  );
+}
+
+export function useGoogleConversionActionsSummary(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const { data, isLoading } = useGoogleConversionActions(dateStart, dateStop, campaignIds);
+  const summary = useMemo(() => {
+    if (!data) return [];
+    const agg: Record<string, { id: string; name: string; category: string | null; conversions: number; conversions_value: number }> = {};
+    for (const r of data) {
+      const k = r.conversion_action_id;
+      if (!agg[k]) agg[k] = { id: k, name: r.conversion_action_name, category: r.conversion_action_category, conversions: 0, conversions_value: 0 };
+      agg[k].conversions       += r.conversions;
+      agg[k].conversions_value += r.conversions_value;
+    }
+    return Object.values(agg).sort((a, b) => b.conversions - a.conversions);
+  }, [data]);
+  return { summary, isLoading };
+}
+
+// ── Network/Platform performance ──────────────────────────────────────────────
+
+export function useGoogleNetwork(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const sorted = [...campaignIds].sort();
+  return useSWR<GooglePerfNetwork[]>(
+    ["google_perf_network", dateStart, dateStop, sorted.join(",")],
+    async () => {
+      let q = supabase.from("v_google_perf_network").select("*").gte("date", dateStart).lte("date", dateStop);
+      if (sorted.length > 0) q = q.in("campaign_id", sorted);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as GooglePerfNetwork[];
+    },
+    { refreshInterval: REVALIDATE }
+  );
+}
+
+export function useGoogleNetworkSummary(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const { data, isLoading } = useGoogleNetwork(dateStart, dateStop, campaignIds);
+  const summary = useMemo(() => {
+    if (!data) return [];
+    const agg: Record<string, { network: string; impressions: number; clicks: number; cost_idr: number; conversions: number }> = {};
+    for (const r of data) {
+      if (!agg[r.network]) agg[r.network] = { network: r.network, impressions: 0, clicks: 0, cost_idr: 0, conversions: 0 };
+      agg[r.network].impressions  += r.impressions;
+      agg[r.network].clicks       += r.clicks;
+      agg[r.network].cost_idr     += r.cost_idr;
+      agg[r.network].conversions  += r.conversions;
+    }
+    const label: Record<string, string> = { SEARCH: "Search", DISPLAY: "Display", YOUTUBE_WATCH: "YouTube", CROSS_NETWORK: "Cross-Network", MIXED: "Mixed", CONTENT: "Content", UNKNOWN: "Lainnya" };
+    return Object.values(agg)
+      .map((r) => ({ ...r, label: label[r.network] ?? r.network }))
+      .sort((a, b) => b.cost_idr - a.cost_idr);
+  }, [data]);
+  return { summary, isLoading };
+}
+
+export function useGoogleNetworkDaily(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const { data, isLoading } = useGoogleNetwork(dateStart, dateStop, campaignIds);
+  const daily = useMemo(() => {
+    if (!data) return [];
+    const agg: Record<string, Record<string, number>> = {};
+    for (const r of data) {
+      if (!agg[r.date]) agg[r.date] = { date_ts: new Date(r.date).getTime() };
+      agg[r.date][r.network] = (agg[r.date][r.network] ?? 0) + r.cost_idr;
+    }
+    return Object.entries(agg).map(([date, v]) => ({ date, ...v })).sort((a, b) => a.date.localeCompare(b.date));
+  }, [data]);
+  return { daily, isLoading };
+}
+
+// ── Landing pages ─────────────────────────────────────────────────────────────
+
+export function useGoogleLandingPages(dateStart: string, dateStop: string, limit = 20) {
+  return useSWR<GoogleLandingPage[]>(
+    ["google_landing_pages", dateStart, dateStop, limit],
+    async () => {
+      const { data, error } = await supabase
+        .from("v_google_landing_pages")
+        .select("*")
+        .gte("date", dateStart)
+        .lte("date", dateStop)
+        .order("clicks", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as GoogleLandingPage[];
+    },
+    { refreshInterval: REVALIDATE }
+  );
+}
+
+export function useGoogleLandingPagesSummary(dateStart: string, dateStop: string) {
+  const { data, isLoading } = useGoogleLandingPages(dateStart, dateStop, 50);
+  const summary = useMemo(() => {
+    if (!data) return [];
+    const agg: Record<string, { url: string; clicks: number; speed_score: number | null; mobile_friendly_pct: number | null; count: number }> = {};
+    for (const r of data) {
+      const k = r.unexpanded_final_url;
+      if (!agg[k]) agg[k] = { url: k, clicks: 0, speed_score: null, mobile_friendly_pct: null, count: 0 };
+      agg[k].clicks += r.clicks;
+      if (r.speed_score != null) { agg[k].speed_score = ((agg[k].speed_score ?? 0) * agg[k].count + r.speed_score) / (agg[k].count + 1); }
+      if (r.mobile_friendly_pct != null) { agg[k].mobile_friendly_pct = ((agg[k].mobile_friendly_pct ?? 0) * agg[k].count + r.mobile_friendly_pct) / (agg[k].count + 1); }
+      agg[k].count++;
+    }
+    return Object.values(agg).sort((a, b) => b.clicks - a.clicks);
+  }, [data]);
+  return { summary, isLoading };
+}
+
+// ── Impression Share summary dari existing adperf ─────────────────────────────
+
+export function useGoogleImpressionShare(dateStart: string, dateStop: string, campaignIds: string[] = []) {
+  const { data: perfData, isLoading } = useSWR<GoogleAdPerfDaily[]>(
+    ["google_adperf_is", dateStart, dateStop, [...campaignIds].sort().join(",")],
+    async () => {
+      let q = supabase.from("v_google_adperf_daily")
+        .select("campaign_id,campaign_name,date,search_impression_share_pct,budget_lost_is_pct,rank_lost_is_pct,abs_top_is_pct,top_is_pct")
+        .gte("date", dateStart).lte("date", dateStop);
+      if (campaignIds.length > 0) q = q.in("campaign_id", campaignIds);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as GoogleAdPerfDaily[];
+    },
+    { refreshInterval: REVALIDATE }
+  );
+  const totals = useMemo(() => {
+    if (!perfData || perfData.length === 0) return null;
+    const valid = perfData.filter((r) => r.search_impression_share_pct != null);
+    if (valid.length === 0) return null;
+    return {
+      avg_is:       valid.reduce((s, r) => s + (r.search_impression_share_pct ?? 0), 0) / valid.length,
+      avg_budget_lost: valid.reduce((s, r) => s + (r.budget_lost_is_pct ?? 0), 0) / valid.length,
+      avg_rank_lost:   valid.reduce((s, r) => s + (r.rank_lost_is_pct ?? 0), 0) / valid.length,
+      avg_abs_top:     valid.reduce((s, r) => s + (r.abs_top_is_pct ?? 0), 0) / valid.length,
+      avg_top:         valid.reduce((s, r) => s + (r.top_is_pct ?? 0), 0) / valid.length,
+    };
+  }, [perfData]);
+  return { totals, isLoading };
 }
 
 // ── GA4 hooks ─────────────────────────────────────────────────────────────────

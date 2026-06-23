@@ -70,7 +70,17 @@ async function syncCampaigns(sb: any, tok: string, ds: string, de: string) {
       segments.date,
       metrics.impressions, metrics.clicks, metrics.cost_micros,
       metrics.conversions, metrics.conversions_value,
-      metrics.ctr, metrics.average_cpc, metrics.cost_per_conversion
+      metrics.ctr, metrics.average_cpc, metrics.cost_per_conversion,
+      metrics.search_impression_share,
+      metrics.search_budget_lost_impression_share,
+      metrics.search_rank_lost_impression_share,
+      metrics.absolute_top_impression_percentage,
+      metrics.top_impression_percentage,
+      metrics.video_views,
+      metrics.video_view_rate,
+      metrics.view_through_conversions,
+      metrics.active_view_impressions,
+      metrics.active_view_viewability
     FROM campaign
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
       AND campaign.status != 'REMOVED'
@@ -87,6 +97,16 @@ async function syncCampaigns(sb: any, tok: string, ds: string, de: string) {
       impressions: toInt(m.impressions), clicks: toInt(m.clicks), cost_micros: toInt(m.costMicros),
       conversions: toFloat(m.conversions), conversions_value: toFloat(m.conversionsValue),
       ctr: toFloat(m.ctr), average_cpc: toInt(m.averageCpc), cost_per_conversion: toFloat(m.costPerConversion),
+      search_impression_share:      m.searchImpressionShare              != null ? toFloat(m.searchImpressionShare)              : null,
+      budget_lost_impression_share: m.searchBudgetLostImpressionShare    != null ? toFloat(m.searchBudgetLostImpressionShare)    : null,
+      rank_lost_impression_share:   m.searchRankLostImpressionShare      != null ? toFloat(m.searchRankLostImpressionShare)      : null,
+      abs_top_impression_pct:       m.absoluteTopImpressionPercentage    != null ? toFloat(m.absoluteTopImpressionPercentage)    : null,
+      top_impression_pct:           m.topImpressionPercentage            != null ? toFloat(m.topImpressionPercentage)            : null,
+      video_views:                  toInt(m.videoViews),
+      video_view_rate:              m.videoViewRate         != null ? toFloat(m.videoViewRate)         : null,
+      view_through_conversions:     toFloat(m.viewThroughConversions),
+      active_view_impressions:      toInt(m.activeViewImpressions),
+      active_view_viewability:      m.activeViewViewability != null ? toFloat(m.activeViewViewability) : null,
       synced_at: now() });
   }
 
@@ -188,6 +208,9 @@ async function syncKeywords(sb: any, tok: string, ds: string, de: string) {
       ad_group_criterion.keyword.match_type,
       ad_group_criterion.status,
       ad_group_criterion.quality_info.quality_score,
+      ad_group_criterion.quality_info.expected_ctr,
+      ad_group_criterion.quality_info.ad_relevance,
+      ad_group_criterion.quality_info.landing_page_experience,
       ad_group.id, campaign.id, segments.date,
       metrics.impressions, metrics.clicks, metrics.cost_micros,
       metrics.conversions, metrics.ctr, metrics.average_cpc
@@ -206,6 +229,9 @@ async function syncKeywords(sb: any, tok: string, ds: string, de: string) {
     return { id: `${critId}_${s.date}`, criterion_id: critId, adgroup_id: String(ag.id), campaign_id: String(c.id), customer_id: CUSTOMER_ID,
       keyword_text: kw.text ?? "", match_type: kw.matchType ?? null, status: agc.status,
       quality_score: qi.qualityScore ? Number(qi.qualityScore) : null,
+      expected_ctr:            qi.expectedCtr           ? String(qi.expectedCtr)           : null,
+      ad_relevance:            qi.adRelevance           ? String(qi.adRelevance)           : null,
+      landing_page_experience: qi.landingPageExperience ? String(qi.landingPageExperience) : null,
       date: s.date, impressions: toInt(m.impressions), clicks: toInt(m.clicks),
       cost_micros: toInt(m.costMicros), conversions: toFloat(m.conversions),
       ctr: toFloat(m.ctr), average_cpc: toInt(m.averageCpc), synced_at: now() };
@@ -571,9 +597,248 @@ async function syncLocationTargeting(sb: any, tok: string) {
   return { location_targeting_rows: mapped.length };
 }
 
+// ── 15. Auction Insights (Analisa Lelang) ────────────────────────────────────
+
+// deno-lint-ignore no-explicit-any
+async function syncAuctionInsights(sb: any, tok: string, ds: string, de: string) {
+  const rows = await runGaql(tok, `
+    SELECT
+      auction_insight.domain,
+      campaign.id, segments.date,
+      metrics.auction_insight_search_impression_share,
+      metrics.auction_insight_search_outranking_share,
+      metrics.auction_insight_search_overlap_rate,
+      metrics.auction_insight_search_position_above_rate,
+      metrics.auction_insight_search_top_impression_percentage,
+      metrics.auction_insight_search_absolute_top_impression_percentage
+    FROM auction_insight
+    WHERE segments.date BETWEEN '${ds}' AND '${de}'
+      AND campaign.status != 'REMOVED'
+  `);
+
+  const rawMapped = rows.map((row) => {
+    const ai = row.auctionInsight as Record<string, unknown>;
+    const c  = row.campaign, s = row.segments, m = row.metrics;
+    const cId   = String(c.id);
+    const domain = String(ai.domain ?? "unknown");
+    return {
+      id: `${cId}_${s.date}_${domain}`,
+      campaign_id: cId, customer_id: CUSTOMER_ID, date: s.date, domain,
+      impression_share:     m.auctionInsightSearchImpressionShare                   != null ? toFloat(m.auctionInsightSearchImpressionShare)                   : null,
+      outranking_share:     m.auctionInsightSearchOutrankingShare                   != null ? toFloat(m.auctionInsightSearchOutrankingShare)                   : null,
+      overlap_rate:         m.auctionInsightSearchOverlapRate                        != null ? toFloat(m.auctionInsightSearchOverlapRate)                        : null,
+      position_above_rate:  m.auctionInsightSearchPositionAboveRate                 != null ? toFloat(m.auctionInsightSearchPositionAboveRate)                 : null,
+      top_of_page_rate:     m.auctionInsightSearchTopImpressionPercentage           != null ? toFloat(m.auctionInsightSearchTopImpressionPercentage)           : null,
+      abs_top_of_page_rate: m.auctionInsightSearchAbsoluteTopImpressionPercentage   != null ? toFloat(m.auctionInsightSearchAbsoluteTopImpressionPercentage)   : null,
+      synced_at: now(),
+    };
+  });
+  const deduped = new Map<string, Record<string, unknown>>();
+  for (const r of rawMapped) deduped.set(r.id, r);
+  const n = await upsertBatch(sb, "google_auction_insights", [...deduped.values()], "campaign_id,date,domain");
+  return { auction_insight_rows: n };
+}
+
+// ── 16. Ad-level daily performance ───────────────────────────────────────────
+
+// deno-lint-ignore no-explicit-any
+async function syncAdPerfDaily(sb: any, tok: string, ds: string, de: string) {
+  const rows = await runGaql(tok, `
+    SELECT
+      ad_group_ad.ad.id, ad_group.id, campaign.id, segments.date,
+      metrics.impressions, metrics.clicks, metrics.cost_micros,
+      metrics.conversions, metrics.ctr, metrics.average_cpc
+    FROM ad_group_ad
+    WHERE segments.date BETWEEN '${ds}' AND '${de}'
+      AND campaign.status != 'REMOVED' AND ad_group.status != 'REMOVED'
+      AND ad_group_ad.status != 'REMOVED'
+      AND metrics.impressions > 0
+  `);
+
+  const rawMapped = rows.map((row) => {
+    const ada = row.adGroupAd as Record<string, unknown>;
+    const ad  = (ada.ad ?? {}) as Record<string, unknown>;
+    const ag = row.adGroup, c = row.campaign, s = row.segments, m = row.metrics;
+    const adId = String(ad.id);
+    return {
+      id: `${adId}_${s.date}`, ad_id: adId, adgroup_id: String(ag.id),
+      campaign_id: String(c.id), customer_id: CUSTOMER_ID, date: s.date,
+      impressions: toInt(m.impressions), clicks: toInt(m.clicks), cost_micros: toInt(m.costMicros),
+      conversions: toFloat(m.conversions), ctr: toFloat(m.ctr), average_cpc: toInt(m.averageCpc),
+      synced_at: now(),
+    };
+  });
+  const deduped = new Map<string, Record<string, unknown>>();
+  for (const r of rawMapped) deduped.set(r.id, r);
+  const n = await upsertBatch(sb, "google_ad_perf_daily", [...deduped.values()], "ad_id,date");
+  return { ad_perf_daily_rows: n };
+}
+
+// ── 17. Asset performance (RSA headlines & descriptions) ─────────────────────
+
+// deno-lint-ignore no-explicit-any
+async function syncAssets(sb: any, tok: string) {
+  const rows = await runGaql(tok, `
+    SELECT
+      ad_group_ad_asset_view.ad_group_ad,
+      ad_group_ad_asset_view.asset_field_type,
+      ad_group_ad_asset_view.performance_label,
+      asset.text_asset.text,
+      ad_group.id, campaign.id,
+      metrics.impressions, metrics.clicks
+    FROM ad_group_ad_asset_view
+    WHERE campaign.status != 'REMOVED' AND ad_group.status != 'REMOVED'
+  `);
+
+  const extractId = (resourceName: unknown) => {
+    const s = String(resourceName ?? "");
+    const parts = s.split("~");
+    return parts[parts.length - 1] ?? s;
+  };
+
+  const rawMapped = rows.map((row) => {
+    const view   = row.adGroupAdAssetView as Record<string, unknown>;
+    const asset  = (row.asset ?? {}) as Record<string, unknown>;
+    const text_a = (asset.textAsset ?? {}) as Record<string, unknown>;
+    const ag = row.adGroup, c = row.campaign, m = row.metrics;
+    const adId       = extractId(view.adGroupAd);
+    const fieldType  = String(view.assetFieldType ?? "UNKNOWN");
+    const label      = String(view.performanceLabel ?? "UNRATED");
+    const assetText  = String(text_a.text ?? "");
+    const key        = `${adId}_${fieldType}_${assetText.slice(0, 50)}`;
+    return {
+      id: key, ad_id: adId, adgroup_id: String(ag.id), campaign_id: String(c.id),
+      customer_id: CUSTOMER_ID, asset_field_type: fieldType, asset_text: assetText || null,
+      performance_label: label,
+      impressions: toInt(m.impressions), clicks: toInt(m.clicks),
+      synced_at: now(),
+    };
+  }).filter((r) => r.asset_text);
+
+  const deduped = new Map<string, Record<string, unknown>>();
+  for (const r of rawMapped) deduped.set(r.id, r);
+  const n = await upsertBatch(sb, "google_asset_performance", [...deduped.values()], "id");
+  return { asset_rows: n };
+}
+
+// ── 18. Conversion action breakdown (konversi per jenis) ─────────────────────
+
+// deno-lint-ignore no-explicit-any
+async function syncConversionActions(sb: any, tok: string, ds: string, de: string) {
+  const rows = await runGaql(tok, `
+    SELECT
+      campaign.id, segments.date,
+      segments.conversion_action,
+      segments.conversion_action_name,
+      segments.conversion_action_category,
+      metrics.conversions, metrics.conversions_value
+    FROM campaign
+    WHERE segments.date BETWEEN '${ds}' AND '${de}'
+      AND campaign.status != 'REMOVED'
+      AND metrics.conversions > 0
+  `);
+
+  const extractId = (resourceName: unknown) => {
+    const s = String(resourceName ?? "");
+    return s.split("/").pop() ?? s;
+  };
+
+  const rawMapped = rows.map((row) => {
+    const c = row.campaign, s = row.segments, m = row.metrics;
+    const cId    = String(c.id);
+    const convId = extractId(s.conversionAction);
+    return {
+      id: `${cId}_${s.date}_${convId}`,
+      campaign_id: cId, customer_id: CUSTOMER_ID, date: s.date,
+      conversion_action_id:       convId,
+      conversion_action_name:     String(s.conversionActionName ?? ""),
+      conversion_action_category: String(s.conversionActionCategory ?? ""),
+      conversions:       toFloat(m.conversions),
+      conversions_value: toFloat(m.conversionsValue),
+      synced_at: now(),
+    };
+  });
+  const deduped = new Map<string, Record<string, unknown>>();
+  for (const r of rawMapped) deduped.set(r.id, r);
+  const n = await upsertBatch(sb, "google_conversion_actions", [...deduped.values()], "campaign_id,date,conversion_action_id");
+  return { conversion_action_rows: n };
+}
+
+// ── 19. Network/Platform breakdown ───────────────────────────────────────────
+
+// deno-lint-ignore no-explicit-any
+async function syncNetwork(sb: any, tok: string, ds: string, de: string) {
+  const rows = await runGaql(tok, `
+    SELECT
+      campaign.id, segments.date, segments.ad_network_type,
+      metrics.impressions, metrics.clicks, metrics.cost_micros,
+      metrics.conversions, metrics.ctr, metrics.average_cpc
+    FROM campaign
+    WHERE segments.date BETWEEN '${ds}' AND '${de}'
+      AND campaign.status != 'REMOVED'
+      AND metrics.impressions > 0
+  `);
+
+  const mapped = rows.map((row) => {
+    const c = row.campaign, s = row.segments, m = row.metrics;
+    const cId    = String(c.id);
+    const network = String(s.adNetworkType ?? "UNKNOWN");
+    return {
+      id: `${cId}_${s.date}_${network}`,
+      campaign_id: cId, customer_id: CUSTOMER_ID, date: s.date, network,
+      impressions: toInt(m.impressions), clicks: toInt(m.clicks), cost_micros: toInt(m.costMicros),
+      conversions: toFloat(m.conversions), ctr: toFloat(m.ctr), average_cpc: toInt(m.averageCpc),
+      synced_at: now(),
+    };
+  });
+  const n = await upsertBatch(sb, "google_perf_network", mapped, "campaign_id,date,network");
+  return { network_rows: n };
+}
+
+// ── 20. Landing page performance ─────────────────────────────────────────────
+
+// deno-lint-ignore no-explicit-any
+async function syncLandingPages(sb: any, tok: string, ds: string, de: string) {
+  const rows = await runGaql(tok, `
+    SELECT
+      landing_page_view.unexpanded_final_url,
+      segments.date,
+      metrics.clicks,
+      metrics.speed_score,
+      metrics.mobile_friendly_clicks_percentage,
+      metrics.valid_accelerated_mobile_pages_clicks_percentage
+    FROM landing_page_view
+    WHERE segments.date BETWEEN '${ds}' AND '${de}'
+      AND metrics.clicks > 0
+  `);
+
+  const rawMapped = rows.map((row) => {
+    const lp = row.landingPageView as Record<string, unknown>;
+    const s  = row.segments, m = row.metrics;
+    const url = String(lp.unexpandedFinalUrl ?? "");
+    if (!url) return null;
+    const urlHash = url.slice(0, 200);
+    return {
+      id: `${s.date}_${urlHash}`,
+      customer_id: CUSTOMER_ID, date: s.date,
+      unexpanded_final_url: url,
+      clicks: toInt(m.clicks),
+      speed_score: m.speedScore != null ? Number(m.speedScore) : null,
+      mobile_friendly_clicks_pct: m.mobileFriendlyClicksPercentage != null ? toFloat(m.mobileFriendlyClicksPercentage) : null,
+      valid_amp_clicks_pct:       m.validAcceleratedMobilePagesClicksPercentage != null ? toFloat(m.validAcceleratedMobilePagesClicksPercentage) : null,
+      synced_at: now(),
+    };
+  }).filter(Boolean) as Record<string, unknown>[];
+
+  const deduped = new Map<string, Record<string, unknown>>();
+  for (const r of rawMapped) deduped.set(r.id, r);
+  const n = await upsertBatch(sb, "google_landing_pages", [...deduped.values()], "date,unexpanded_final_url");
+  return { landing_page_rows: n };
+}
+
 // ── Main handler ───────────────────────────────────────────────────────────────
 
-type SyncType = "all" | "campaigns" | "adgroups" | "ads" | "adgroup_perf" | "keywords" | "search_terms" | "device" | "age" | "gender" | "geo" | "hour" | "demographics" | "geo_targets" | "city" | "location_targeting";
+type SyncType = "all" | "campaigns" | "adgroups" | "ads" | "adgroup_perf" | "keywords" | "search_terms" | "device" | "age" | "gender" | "geo" | "hour" | "demographics" | "geo_targets" | "city" | "location_targeting" | "auction_insights" | "ad_perf_daily" | "assets" | "conversion_actions" | "network" | "landing_pages" | "extended";
 
 Deno.serve(async (req) => {
   try {
@@ -602,9 +867,15 @@ Deno.serve(async (req) => {
     if (type === "gender"       || type === "all" || type === "demographics") Object.assign(results, await syncGender     (sb, tok, dateStart, dateStop));
     if (type === "geo"          || type === "all" || type === "demographics") Object.assign(results, await syncGeo        (sb, tok, dateStart, dateStop));
     if (type === "hour"         || type === "all" || type === "demographics") Object.assign(results, await syncHour       (sb, tok, dateStart, dateStop));
-    if (type === "geo_targets"       || type === "all") Object.assign(results, await syncGeoTargets       (sb, tok));
-    if (type === "city"              || type === "all") Object.assign(results, await syncCity              (sb, tok, dateStart, dateStop));
-    if (type === "location_targeting"|| type === "all") Object.assign(results, await syncLocationTargeting (sb, tok));
+    if (type === "geo_targets"        || type === "all") Object.assign(results, await syncGeoTargets        (sb, tok));
+    if (type === "city"               || type === "all") Object.assign(results, await syncCity               (sb, tok, dateStart, dateStop));
+    if (type === "location_targeting" || type === "all") Object.assign(results, await syncLocationTargeting  (sb, tok));
+    if (type === "auction_insights"   || type === "extended") Object.assign(results, await syncAuctionInsights  (sb, tok, dateStart, dateStop));
+    if (type === "ad_perf_daily"      || type === "extended") Object.assign(results, await syncAdPerfDaily      (sb, tok, dateStart, dateStop));
+    if (type === "assets"             || type === "extended") Object.assign(results, await syncAssets            (sb, tok));
+    if (type === "conversion_actions" || type === "extended") Object.assign(results, await syncConversionActions (sb, tok, dateStart, dateStop));
+    if (type === "network"            || type === "extended") Object.assign(results, await syncNetwork            (sb, tok, dateStart, dateStop));
+    if (type === "landing_pages"      || type === "extended") Object.assign(results, await syncLandingPages       (sb, tok, dateStart, dateStop));
 
     console.log("Done:", JSON.stringify(results));
     return new Response(JSON.stringify({ ok: true, ...results }), { headers: { "Content-Type": "application/json" } });

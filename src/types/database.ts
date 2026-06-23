@@ -208,6 +208,105 @@ export interface GoogleAdPerfDaily {
   ctr_pct: number;
   avg_cpc_idr: number;
   cost_per_conversion_idr: number;
+  // Impression Share (nullable — hanya Search campaigns)
+  search_impression_share_pct: number | null;
+  budget_lost_is_pct: number | null;
+  rank_lost_is_pct: number | null;
+  abs_top_is_pct: number | null;
+  top_is_pct: number | null;
+  // Video
+  video_views: number;
+  video_view_rate_pct: number | null;
+  view_through_conversions: number;
+  // Viewability
+  active_view_impressions: number;
+  active_view_viewability_pct: number | null;
+}
+
+// Auction Insights (Analisa Lelang)
+export interface GoogleAuctionInsight {
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  domain: string;
+  impression_share_pct: number | null;
+  outranking_share_pct: number | null;
+  overlap_rate_pct: number | null;
+  position_above_rate_pct: number | null;
+  top_of_page_rate_pct: number | null;
+  abs_top_of_page_rate_pct: number | null;
+}
+
+// Ad-level daily performance
+export interface GoogleAdPerfDailyRow {
+  ad_id: string;
+  ad_name: string;
+  ad_type: string | null;
+  ad_status: string | null;
+  headlines: string[];
+  adgroup_id: string;
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
+
+// Asset performance (RSA headlines & descriptions)
+export interface GoogleAssetPerformance {
+  id: string;
+  ad_id: string;
+  adgroup_id: string;
+  campaign_id: string;
+  campaign_name: string;
+  asset_field_type: string;
+  asset_text: string | null;
+  performance_label: string | null;
+  impressions: number;
+  clicks: number;
+}
+
+// Conversion action breakdown
+export interface GoogleConversionAction {
+  campaign_id: string;
+  campaign_name: string;
+  date: string;
+  conversion_action_id: string;
+  conversion_action_name: string;
+  conversion_action_category: string | null;
+  conversions: number;
+  conversions_value: number;
+}
+
+// Network/Platform performance
+export interface GooglePerfNetwork {
+  campaign_id: string;
+  campaign_name: string;
+  advertising_channel_type: string | null;
+  date: string;
+  network: string;
+  impressions: number;
+  clicks: number;
+  cost_idr: number;
+  conversions: number;
+  ctr_pct: number;
+  avg_cpc_idr: number;
+}
+
+// Landing page performance
+export interface GoogleLandingPage {
+  id: string;
+  customer_id: string;
+  date: string;
+  unexpanded_final_url: string;
+  clicks: number;
+  speed_score: number | null;
+  mobile_friendly_pct: number | null;
+  amp_pct: number | null;
 }
 
 // ── Google Analytics 4 ────────────────────────────────────────────────────────

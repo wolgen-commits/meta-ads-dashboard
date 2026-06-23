@@ -23,6 +23,15 @@ import {
   useGoogleGeoSummary,
   useGoogleLocationTargeting,
   useGoogleHourSummary,
+  useGoogleCitySummary,
+  useGoogleAuctionInsightsSummary,
+  useGoogleAdPerfDailySummary,
+  useGoogleAssets,
+  useGoogleConversionActionsSummary,
+  useGoogleNetworkSummary,
+  useGoogleNetworkDaily,
+  useGoogleLandingPagesSummary,
+  useGoogleImpressionShare,
 } from "@/hooks/useGoogleData";
 
 // â”€â”€ Formatting helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -172,8 +181,10 @@ export function GoogleAdsTab() {
   const [campaignDropdownOpen,  setCampaignDropdownOpen]  = useState(false);
   const campaignDropdownRef = useRef<HTMLDivElement>(null);
   const [adsAudienceTab,        setAdsAudienceTab]        = useState<"age" | "gender" | "device">("age");
-  const [adsGeoTab,      setAdsGeoTab]      = useState<"country" | "hour" | "targeting">("country");
-  const [adsKwTab,       setAdsKwTab]       = useState<"keywords" | "search_terms" | "adgroups" | "ads">("keywords");
+  const [adsGeoTab,      setAdsGeoTab]      = useState<"country" | "city" | "hour" | "targeting">("country");
+  const [adsKwTab,       setAdsKwTab]       = useState<"keywords" | "search_terms" | "adgroups" | "ads" | "assets">("keywords");
+  const [adsIklanView,   setAdsIklanView]   = useState<"kreatif" | "performa">("kreatif");
+  const [networkView,    setNetworkView]    = useState<"total" | "harian">("total");
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (campaignDropdownRef.current && !campaignDropdownRef.current.contains(e.target as Node)) {
@@ -216,6 +227,15 @@ export function GoogleAdsTab() {
   const { summary: geoSummary,      isLoading: geoGLoading }  = useGoogleGeoSummary(dateStart, dateStop, selectedCampaigns);
   const { data: locationTargeting,  isLoading: ltLoading }    = useGoogleLocationTargeting(selectedCampaigns);
   const { summary: hourSummary,     isLoading: hourLoading }  = useGoogleHourSummary(dateStart, dateStop, selectedCampaigns);
+  const { summary: citySummary,     isLoading: cityLoading }  = useGoogleCitySummary(dateStart, dateStop, selectedCampaigns);
+  const { summary: auctionSummary,  isLoading: auctionLoading } = useGoogleAuctionInsightsSummary(dateStart, dateStop, selectedCampaigns);
+  const { summary: adPerfSummary,   isLoading: adPerfLoading }  = useGoogleAdPerfDailySummary(dateStart, dateStop, selectedCampaigns);
+  const { data:    assetData,       isLoading: assetLoading }   = useGoogleAssets(selectedCampaigns);
+  const { summary: convSummary,     isLoading: convLoading }    = useGoogleConversionActionsSummary(dateStart, dateStop, selectedCampaigns);
+  const { summary: networkSummary,  isLoading: netLoading }     = useGoogleNetworkSummary(dateStart, dateStop, selectedCampaigns);
+  const { daily:   networkDaily }                                = useGoogleNetworkDaily(dateStart, dateStop, selectedCampaigns);
+  const { summary: lpSummary,       isLoading: lpLoading }      = useGoogleLandingPagesSummary(dateStart, dateStop);
+  const { totals: isTotals }                                     = useGoogleImpressionShare(dateStart, dateStop, selectedCampaigns);
 
   // â”€â”€ Derived â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const sortedCampaigns = useMemo(
@@ -381,6 +401,9 @@ export function GoogleAdsTab() {
             <KpiCard label="CPC"          value={gLoading ? "—" : idr(gTotals?.cpc ?? 0)}          loading={gLoading} sub="per klik"   description="Cost Per Click — rata-rata biaya per klik iklan." />
             <KpiCard label="Konversi"     value={gLoading ? "—" : num(gTotals?.conversions ?? 0)}  loading={gLoading} accent="success" description="Jumlah total konversi yang dihasilkan dari iklan." />
             <KpiCard label="Biaya/Konv."  value={gLoading ? "—" : idr(gTotals?.cpa ?? 0)}          loading={gLoading} accent="warning" sub="per konversi" description="Rata-rata pengeluaran untuk mendapatkan satu konversi." />
+            <KpiCard label="Imp. Share"   value={isTotals ? pct(isTotals.avg_is) : "—"}             accent="info"    sub="rata-rata" description="Search Impression Share — % tayangan yang berhasil ditampilkan vs total yang eligible." />
+            <KpiCard label="IS Hilang (Budget)" value={isTotals ? pct(isTotals.avg_budget_lost) : "—"} accent={isTotals && isTotals.avg_budget_lost > 20 ? "warning" : undefined} sub="rata-rata" description="% tayangan hilang karena budget iklan tidak cukup. Jika tinggi, pertimbangkan menaikkan budget." />
+            <KpiCard label="IS Hilang (Rank)"   value={isTotals ? pct(isTotals.avg_rank_lost) : "—"}   accent={isTotals && isTotals.avg_rank_lost > 20 ? "warning" : undefined}   sub="rata-rata" description="% tayangan hilang karena kualitas iklan/bid terlalu rendah. Jika tinggi, perbaiki Quality Score." />
           </section>
 
           {/* Main 3-column grid */}
@@ -553,7 +576,7 @@ export function GoogleAdsTab() {
                       <span>Klik: <strong style={{ color: "#BB2649" }}>{num(geoSummary[0]?.clicks ?? 0)}</strong></span>
                     </div>
                   </div>
-                    {([{ k: "country", l: "Negara" }, { k: "hour", l: "Jadwal" }, { k: "targeting", l: "Lokasi" }] as const).map(({ k, l }) => (
+                    {([{ k: "country", l: "Negara" }, { k: "city", l: "Kota" }, { k: "hour", l: "Jadwal" }, { k: "targeting", l: "Lokasi" }] as const).map(({ k, l }) => (
                       <button key={k} onClick={() => setAdsGeoTab(k)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: adsGeoTab === k ? 600 : 400, cursor: "pointer", border: adsGeoTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: adsGeoTab === k ? "#BB2649" : "transparent", color: adsGeoTab === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
                     ))}
                   </div>
@@ -573,6 +596,28 @@ export function GoogleAdsTab() {
                               <td style={{ ...TD_STYLE, padding: "4px 6px", textAlign: "right" }}>{num(r.impressions)}</td>
                               <td style={{ ...TD_STYLE, padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>{num(r.clicks)}</td>
                               <td style={{ ...TD_STYLE, padding: "4px 6px", textAlign: "right", color: "#BB2649", fontWeight: 600 }}>{idr(r.cost_idr)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                )}
+                {adsGeoTab === "city" && (
+                  cityLoading ? <Empty msg="Memuat…" /> :
+                  citySummary.length === 0 ? <Empty msg="Jalankan type=city." /> : (
+                    <div style={{ overflowY: "auto", maxHeight: 175 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                        <thead><tr>{["#","Kota","Biaya","Klik","Impresi","Konv."].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "4px 6px", fontSize: 10 }}>{h}</th>)}</tr></thead>
+                        <tbody>
+                          {citySummary.slice(0, 15).map((r, i) => (
+                            <tr key={r.key} onMouseEnter={(e) => hoverRow(e, true)} onMouseLeave={(e) => hoverRow(e, false)}>
+                              <td style={{ ...TD_STYLE, padding: "4px 6px", fontSize: 9, color: "var(--gray-400)", width: 18 }}>{i + 1}</td>
+                              <td style={{ ...TD_STYLE, padding: "4px 6px", fontWeight: 600, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.canonical ?? r.name}>{r.name}</td>
+                              <td style={{ ...TD_STYLE, padding: "4px 6px", color: "#BB2649", fontWeight: 600, textAlign: "right" }}>{idr(r.cost_idr)}</td>
+                              <td style={{ ...TD_STYLE, padding: "4px 6px", fontWeight: 600, textAlign: "right" }}>{num(r.clicks)}</td>
+                              <td style={{ ...TD_STYLE, padding: "4px 6px", textAlign: "right" }}>{num(r.impressions)}</td>
+                              <td style={{ ...TD_STYLE, padding: "4px 6px", color: r.conversions > 0 ? "#16A34A" : "var(--gray-400)", fontWeight: r.conversions > 0 ? 600 : 400, textAlign: "right" }}>{r.conversions > 0 ? r.conversions.toFixed(1) : "—"}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -643,7 +688,7 @@ export function GoogleAdsTab() {
                     <span>Impresi: <strong style={{ color: "#BB2649" }}>{num(gTotals?.impressions ?? 0)}</strong></span>
                   </div>
                 </div>
-                  {([{ k: "keywords", l: "Kata Kunci" }, { k: "search_terms", l: "Kueri" }, { k: "adgroups", l: "Ad Group" }, { k: "ads", l: "Iklan" }] as const).map(({ k, l }) => (
+                  {([{ k: "keywords", l: "Kata Kunci" }, { k: "search_terms", l: "Kueri" }, { k: "adgroups", l: "Ad Group" }, { k: "ads", l: "Iklan" }, { k: "assets", l: "Aset" }] as const).map(({ k, l }) => (
                     <button key={k} onClick={() => setAdsKwTab(k)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: adsKwTab === k ? 600 : 400, cursor: "pointer", border: adsKwTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: adsKwTab === k ? "#BB2649" : "transparent", color: adsKwTab === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
                   ))}
                 </div>
@@ -718,37 +763,290 @@ export function GoogleAdsTab() {
                   )
                 )}
                 {adsKwTab === "ads" && (
-                  adsLoading ? <Empty msg="Memuat…" /> :
-                  adsError ? <Empty msg={`Error: ${String(adsError?.message ?? adsError)}`} /> :
-                  !adsList || adsList.length === 0 ? <Empty msg="Belum ada data iklan. Jalankan fetch-google-ads dengan type=ads atau type=all." /> : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {adsList.slice(0, 20).map((ad) => {
-                        const campName = allCampaigns?.find((c) => c.id === ad.campaign_id)?.name ?? ad.campaign_id;
-                        const adType = (ad.type ?? "").replace("RESPONSIVE_SEARCH_AD","RSA").replace("EXPANDED_TEXT_AD","ETA").replace("EXPANDED_DYNAMIC_SEARCH_AD","DSA") || "Ad";
-                        return (
-                          <div key={ad.id} style={{ border: "1px solid var(--gray-200)", borderRadius: 6, padding: "8px 10px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                              <span style={{ fontSize: 9, fontWeight: 600, color: "var(--gray-400)", textTransform: "uppercase" }}>{adType}</span>
-                              <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: ad.status === "ENABLED" ? "#F0FDF4" : "#FEF2F2", color: ad.status === "ENABLED" ? "#15803D" : "#B91C1C", fontWeight: 600 }}>{ad.status === "ENABLED" ? "Aktif" : ad.status ?? "—"}</span>
-                            </div>
-                            {ad.headlines.length > 0
-                              ? ad.headlines.slice(0,2).map((h, i) => <p key={i} style={{ fontSize: 12, fontWeight: 600, color: "#1D4ED8", margin: "1px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h}</p>)
-                              : <p style={{ fontSize: 12, color: "var(--gray-400)", fontStyle: "italic", margin: "1px 0" }}>{ad.name ?? "(tanpa judul)"}</p>
-                            }
-                            {ad.descriptions.slice(0,1).map((d, i) => <p key={i} style={{ fontSize: 11, color: "var(--gray-600)", margin: "2px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d}</p>)}
-                            {ad.final_urls?.[0] && <p style={{ fontSize: 10, color: "#16A34A", margin: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.final_urls[0]}</p>}
-                            <p style={{ fontSize: 9, color: "var(--gray-400)", marginTop: 4, borderTop: "1px solid var(--gray-100)", paddingTop: 3 }}>{campName}</p>
-                          </div>
-                        );
-                      })}
-                      {adsList.length > 20 && <p style={{ fontSize: 10, color: "var(--gray-400)", textAlign: "center", padding: "4px 0" }}>Menampilkan 20 dari {adsList.length} iklan</p>}
+                  <div>
+                    <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                      {([{ k: "kreatif" as const, l: "Kreatif" }, { k: "performa" as const, l: "Performa" }]).map(({ k, l }) => (
+                        <button key={k} onClick={() => setAdsIklanView(k)} style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: adsIklanView === k ? 600 : 400, cursor: "pointer", border: adsIklanView === k ? "1px solid #2563EB" : "1px solid var(--gray-200)", background: adsIklanView === k ? "#2563EB" : "transparent", color: adsIklanView === k ? "#fff" : "var(--gray-500)" }}>{l}</button>
+                      ))}
                     </div>
-                  )
+                    {adsIklanView === "kreatif" && (
+                      adsLoading ? <Empty msg="Memuat…" /> :
+                      adsError ? <Empty msg={`Error: ${String(adsError?.message ?? adsError)}`} /> :
+                      !adsList || adsList.length === 0 ? <Empty msg="Belum ada data iklan. Jalankan fetch-google-ads type=ads." /> : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {adsList.slice(0, 20).map((ad) => {
+                            const campName = allCampaigns?.find((c) => c.id === ad.campaign_id)?.name ?? ad.campaign_id;
+                            const adType = (ad.type ?? "").replace("RESPONSIVE_SEARCH_AD","RSA").replace("EXPANDED_TEXT_AD","ETA").replace("EXPANDED_DYNAMIC_SEARCH_AD","DSA") || "Ad";
+                            return (
+                              <div key={ad.id} style={{ border: "1px solid var(--gray-200)", borderRadius: 6, padding: "8px 10px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                                  <span style={{ fontSize: 9, fontWeight: 600, color: "var(--gray-400)", textTransform: "uppercase" }}>{adType}</span>
+                                  <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: ad.status === "ENABLED" ? "#F0FDF4" : "#FEF2F2", color: ad.status === "ENABLED" ? "#15803D" : "#B91C1C", fontWeight: 600 }}>{ad.status === "ENABLED" ? "Aktif" : ad.status ?? "—"}</span>
+                                </div>
+                                {ad.headlines.length > 0
+                                  ? ad.headlines.slice(0,2).map((h, i) => <p key={i} style={{ fontSize: 12, fontWeight: 600, color: "#1D4ED8", margin: "1px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h}</p>)
+                                  : <p style={{ fontSize: 12, color: "var(--gray-400)", fontStyle: "italic", margin: "1px 0" }}>{ad.name ?? "(tanpa judul)"}</p>}
+                                {ad.descriptions.slice(0,1).map((d, i) => <p key={i} style={{ fontSize: 11, color: "var(--gray-600)", margin: "2px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d}</p>)}
+                                {ad.final_urls?.[0] && <p style={{ fontSize: 10, color: "#16A34A", margin: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.final_urls[0]}</p>}
+                                <p style={{ fontSize: 9, color: "var(--gray-400)", marginTop: 4, borderTop: "1px solid var(--gray-100)", paddingTop: 3 }}>{campName}</p>
+                              </div>
+                            );
+                          })}
+                          {adsList.length > 20 && <p style={{ fontSize: 10, color: "var(--gray-400)", textAlign: "center", padding: "4px 0" }}>Menampilkan 20 dari {adsList.length} iklan</p>}
+                        </div>
+                      )
+                    )}
+                    {adsIklanView === "performa" && (
+                      adPerfLoading ? <Empty msg="Memuat…" /> :
+                      adPerfSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=ad_perf_daily atau type=extended." /> : (
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                          <thead><tr>{["Iklan","Tipe","Impresi","Klik","Biaya","Konv."].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "4px 6px", fontSize: 10 }}>{h}</th>)}</tr></thead>
+                          <tbody>
+                            {adPerfSummary.slice(0, 30).map((ad) => (
+                              <tr key={ad.ad_id} onMouseEnter={(e) => hoverRow(e, true)} onMouseLeave={(e) => hoverRow(e, false)}>
+                                <td style={{ ...TD_STYLE, padding: "4px 6px", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500 }} title={ad.headlines[0] ?? ad.ad_name}>{ad.headlines[0] ?? ad.ad_name}</td>
+                                <td style={{ ...TD_STYLE, padding: "4px 6px", fontSize: 9, color: "var(--gray-400)" }}>{(ad.ad_type ?? "").replace("RESPONSIVE_SEARCH_AD","RSA").replace("EXPANDED_TEXT_AD","ETA") || "—"}</td>
+                                <td style={{ ...TD_STYLE, padding: "4px 6px" }}>{num(ad.impressions)}</td>
+                                <td style={{ ...TD_STYLE, padding: "4px 6px", fontWeight: 600 }}>{num(ad.clicks)}</td>
+                                <td style={{ ...TD_STYLE, padding: "4px 6px", color: "#BB2649", fontWeight: 600 }}>{idr(ad.cost_idr)}</td>
+                                <td style={{ ...TD_STYLE, padding: "4px 6px", color: ad.conversions > 0 ? "#16A34A" : "var(--gray-400)", fontWeight: ad.conversions > 0 ? 600 : 400 }}>{ad.conversions > 0 ? ad.conversions.toFixed(1) : "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )
+                    )}
+                  </div>
                 )}
+                {adsKwTab === "assets" && (() => {
+                  const LABEL_ORDER = ["BEST", "GOOD", "LOW", "LEARNING", "UNRATED"];
+                  const LABEL_COLOR: Record<string, { bg: string; fg: string }> = {
+                    BEST:     { bg: "#F0FDF4", fg: "#15803D" },
+                    GOOD:     { bg: "#EFF6FF", fg: "#1D4ED8" },
+                    LOW:      { bg: "#FEF2F2", fg: "#B91C1C" },
+                    LEARNING: { bg: "#FEF9C3", fg: "#854D0E" },
+                    UNRATED:  { bg: "var(--gray-100)", fg: "var(--gray-500)" },
+                  };
+                  const headlines    = (assetData ?? []).filter((a) => a.asset_field_type === "HEADLINE").sort((a, b) => LABEL_ORDER.indexOf(a.performance_label ?? "UNRATED") - LABEL_ORDER.indexOf(b.performance_label ?? "UNRATED"));
+                  const descriptions = (assetData ?? []).filter((a) => a.asset_field_type === "DESCRIPTION").sort((a, b) => LABEL_ORDER.indexOf(a.performance_label ?? "UNRATED") - LABEL_ORDER.indexOf(b.performance_label ?? "UNRATED"));
+                  return assetLoading ? <Empty msg="Memuat…" /> :
+                    (!assetData || assetData.length === 0) ? <Empty msg="Jalankan fetch-google-ads type=assets atau type=extended." /> : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {headlines.length > 0 && (
+                          <div>
+                            <p style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Headlines</p>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                              {headlines.slice(0, 15).map((a) => {
+                                const lc = LABEL_COLOR[a.performance_label ?? "UNRATED"] ?? LABEL_COLOR.UNRATED;
+                                return (
+                                  <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 6px", borderRadius: 4, background: "var(--gray-50)", gap: 6 }}>
+                                    <span style={{ fontSize: 11, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.asset_text}</span>
+                                    <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 5px", borderRadius: 3, background: lc.bg, color: lc.fg, flexShrink: 0 }}>{a.performance_label ?? "—"}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {descriptions.length > 0 && (
+                          <div>
+                            <p style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Descriptions</p>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                              {descriptions.slice(0, 10).map((a) => {
+                                const lc = LABEL_COLOR[a.performance_label ?? "UNRATED"] ?? LABEL_COLOR.UNRATED;
+                                return (
+                                  <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "3px 6px", borderRadius: 4, background: "var(--gray-50)", gap: 6 }}>
+                                    <span style={{ fontSize: 11, flex: 1, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{a.asset_text}</span>
+                                    <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 5px", borderRadius: 3, background: lc.bg, color: lc.fg, flexShrink: 0 }}>{a.performance_label ?? "—"}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                })()}
               </div>
             </div>
 
           </div>
+
+          {/* ── Bottom row: Analisa Lelang | Jenis Konversi | Platform & Jaringan | Landing Page ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
+
+            {/* Analisa Lelang */}
+            <div className="chart-card" style={{ padding: "10px 14px" }}>
+              <div className="chart-header-row" style={{ marginBottom: 8 }}>
+                <div>
+                  <h3 className="chart-title">Analisa Lelang</h3>
+                  <p className="chart-subtitle">Kompetitor di lelang yang sama</p>
+                </div>
+              </div>
+              {auctionLoading ? <Empty msg="Memuat…" /> :
+               !auctionSummary || auctionSummary.length === 0 ? <Empty msg="Jalankan type=auction_insights atau type=extended." /> : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                  <thead>
+                    <tr>
+                      {["Domain","IS%","Overlap%","Menang%","Top%"].map((h) => (
+                        <th key={h} style={{ ...TH_STYLE, padding: "3px 4px", fontSize: 9 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auctionSummary.slice(0, 10).map((row) => (
+                      <tr key={row.domain} onMouseEnter={(e) => hoverRow(e, true)} onMouseLeave={(e) => hoverRow(e, false)}>
+                        <td style={{ ...TD_STYLE, padding: "3px 4px", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10 }} title={row.domain}>{row.domain.replace(/^www\./, "")}</td>
+                        <td style={{ ...TD_STYLE, padding: "3px 4px", fontWeight: 600, color: "#2563EB" }}>{pct(row.impression_share_pct ?? 0)}</td>
+                        <td style={{ ...TD_STYLE, padding: "3px 4px" }}>{pct(row.overlap_rate_pct ?? 0)}</td>
+                        <td style={{ ...TD_STYLE, padding: "3px 4px", color: (row.outranking_share_pct ?? 0) > 50 ? "#16A34A" : "var(--gray-600)" }}>{pct(row.outranking_share_pct ?? 0)}</td>
+                        <td style={{ ...TD_STYLE, padding: "3px 4px" }}>{pct(row.top_of_page_rate_pct ?? 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Jenis Konversi */}
+            <div className="chart-card" style={{ padding: "10px 14px" }}>
+              <div className="chart-header-row" style={{ marginBottom: 8 }}>
+                <div>
+                  <h3 className="chart-title">Jenis Konversi</h3>
+                  <p className="chart-subtitle">WhatsApp, form, telepon, dll</p>
+                </div>
+              </div>
+              {convLoading ? <Empty msg="Memuat…" /> :
+               !convSummary || convSummary.length === 0 ? <Empty msg="Jalankan type=conversion_actions atau type=extended." /> : (() => {
+                const CONV_COLORS = ["#BB2649","#2563EB","#16A34A","#D97706","#7C3AED","#0891B2"];
+                const pieData = convSummary.slice(0, 6).map((c, i) => ({
+                  name: c.name,
+                  value: c.conversions,
+                  fill: CONV_COLORS[i % CONV_COLORS.length],
+                }));
+                return (
+                  <div>
+                    <ResponsiveContainer width="100%" height={100}>
+                      <PieChart>
+                        <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={25} outerRadius={45} paddingAngle={2}>
+                          {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                        </Pie>
+                        <Tooltip formatter={(v) => [Number(v ?? 0).toFixed(1), "Konversi"]} contentStyle={{ fontSize: 10 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 4 }}>
+                      {convSummary.slice(0, 6).map((c, i) => (
+                        <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid var(--gray-100)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, overflow: "hidden" }}>
+                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: CONV_COLORS[i % CONV_COLORS.length], flexShrink: 0 }} />
+                            <span style={{ fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--gray-700)" }}>{c.name}</span>
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 600, flexShrink: 0, marginLeft: 4 }}>{c.conversions.toFixed(1)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+               })()}
+            </div>
+
+            {/* Platform & Jaringan */}
+            <div className="chart-card" style={{ padding: "10px 14px" }}>
+              <div className="chart-header-row" style={{ marginBottom: 8 }}>
+                <div>
+                  <h3 className="chart-title">Platform & Jaringan</h3>
+                  <p className="chart-subtitle">Search, Display, YouTube</p>
+                </div>
+              </div>
+              {netLoading ? <Empty msg="Memuat…" /> :
+               !networkSummary || networkSummary.length === 0 ? <Empty msg="Jalankan type=network atau type=extended." /> : (() => {
+                const NET_COLOR: Record<string, string> = { SEARCH: "#2563EB", DISPLAY: "#16A34A", YOUTUBE_WATCH: "#BB2649", CROSS_NETWORK: "#D97706", UNKNOWN: "var(--gray-400)" };
+                const NET_LABEL: Record<string, string> = { SEARCH: "Search", DISPLAY: "Display", YOUTUBE_WATCH: "YouTube", CROSS_NETWORK: "Cross", UNKNOWN: "Lainnya" };
+                const networks = Object.keys(NET_COLOR);
+                const chartData = (networkDaily ?? []).map((d) => {
+                  const row: Record<string, unknown> = { date: d.date };
+                  networks.forEach((n) => { row[n] = d[n as keyof typeof d] ?? 0; });
+                  return row;
+                });
+                return (
+                  <div>
+                    {chartData.length > 0 && (
+                      <ResponsiveContainer width="100%" height={80}>
+                        <BarChart data={chartData} margin={{ top: 0, right: 0, left: -28, bottom: 0 }}>
+                          <XAxis dataKey="date" hide />
+                          <YAxis tickFormatter={(v) => num(v as number)} tick={{ fontSize: 8 }} />
+                          <Tooltip formatter={(v) => [safeIdr(v), ""]} contentStyle={{ fontSize: 10 }} />
+                          {networks.map((n) => (
+                            <Bar key={n} dataKey={n} stackId="a" fill={NET_COLOR[n]} name={NET_LABEL[n]} />
+                          ))}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10, marginTop: 6 }}>
+                      <thead><tr>{["Jaringan","Biaya","Klik","Konv."].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "3px 4px", fontSize: 9 }}>{h}</th>)}</tr></thead>
+                      <tbody>
+                        {networkSummary.map((n) => (
+                          <tr key={n.network} onMouseEnter={(e) => hoverRow(e, true)} onMouseLeave={(e) => hoverRow(e, false)}>
+                            <td style={{ ...TD_STYLE, padding: "3px 4px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <div style={{ width: 6, height: 6, borderRadius: "50%", background: NET_COLOR[n.network] ?? "var(--gray-400)", flexShrink: 0 }} />
+                                <span>{NET_LABEL[n.network] ?? n.network}</span>
+                              </div>
+                            </td>
+                            <td style={{ ...TD_STYLE, padding: "3px 4px", color: "#BB2649", fontWeight: 600 }}>{idr(n.cost_idr)}</td>
+                            <td style={{ ...TD_STYLE, padding: "3px 4px" }}>{num(n.clicks)}</td>
+                            <td style={{ ...TD_STYLE, padding: "3px 4px", color: n.conversions > 0 ? "#16A34A" : "var(--gray-400)" }}>{n.conversions > 0 ? n.conversions.toFixed(1) : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+               })()}
+            </div>
+
+            {/* Landing Page */}
+            <div className="chart-card" style={{ padding: "10px 14px" }}>
+              <div className="chart-header-row" style={{ marginBottom: 8 }}>
+                <div>
+                  <h3 className="chart-title">Performa Landing Page</h3>
+                  <p className="chart-subtitle">Kecepatan & mobile-friendly</p>
+                </div>
+              </div>
+              {lpLoading ? <Empty msg="Memuat…" /> :
+               !lpSummary || lpSummary.length === 0 ? <Empty msg="Jalankan type=landing_pages atau type=extended." /> : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {lpSummary.slice(0, 8).map((lp) => {
+                    const score = lp.speed_score ?? 0;
+                    const color = score >= 80 ? "#16A34A" : score >= 50 ? "#D97706" : "#B91C1C";
+                    const urlDisplay = lp.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+                    return (
+                      <div key={lp.url} style={{ borderBottom: "1px solid var(--gray-100)", paddingBottom: 5 }}>
+                        <p style={{ fontSize: 10, fontWeight: 500, color: "#1D4ED8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }} title={lp.url}>{urlDisplay}</p>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span style={{ fontSize: 9, color: "var(--gray-400)" }}>Klik: <strong style={{ color: "var(--gray-700)" }}>{num(lp.clicks)}</strong></span>
+                          {score > 0 && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1 }}>
+                              <span style={{ fontSize: 9, color: "var(--gray-400)", flexShrink: 0 }}>Speed:</span>
+                              <div style={{ flex: 1, height: 5, background: "var(--gray-100)", borderRadius: 3, overflow: "hidden" }}>
+                                <div style={{ width: `${Math.min(score, 100)}%`, height: "100%", background: color, borderRadius: 3 }} />
+                              </div>
+                              <span style={{ fontSize: 9, fontWeight: 600, color, flexShrink: 0 }}>{score}</span>
+                            </div>
+                          )}
+                          {(lp.mobile_friendly_pct ?? 0) > 0 && (
+                            <span style={{ fontSize: 9, color: "var(--gray-400)" }}>📱 <strong style={{ color: (lp.mobile_friendly_pct ?? 0) >= 90 ? "#16A34A" : "#D97706" }}>{pct(lp.mobile_friendly_pct ?? 0)}</strong></span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+          </div>
+
         </div>
     </div>
   );
