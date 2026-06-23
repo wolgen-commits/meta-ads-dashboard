@@ -373,7 +373,7 @@ export function GoogleAdsTab() {
           </section>
 
           {/* Main 3-column grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1.1fr 1.4fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, alignItems: "start" }}>
 
             {/* ── Col A: Chart + Campaign table ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -452,7 +452,6 @@ export function GoogleAdsTab() {
             {/* ── Col B: Audiens + Wilayah & Jadwal ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div className="chart-card" style={{ padding: "10px 14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div className="chart-header-row">
                   <div>
                     <h3 className="chart-title" style={{ marginBottom: 2 }}>Audiens</h3>
@@ -462,11 +461,10 @@ export function GoogleAdsTab() {
                       <span>Klik: <strong style={{ color: "#2563EB" }}>{num(gTotals?.clicks ?? 0)}</strong></span>
                     </div>
                   </div>
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "nowrap" }}>
+                  <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "nowrap" }}>
                     {([{ k: "age", l: "Usia" }, { k: "gender", l: "Gender" }, { k: "device", l: "Device" }] as const).map(({ k, l }) => (
                       <button key={k} onClick={() => setAdsAudienceTab(k)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: adsAudienceTab === k ? 600 : 400, cursor: "pointer", border: adsAudienceTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: adsAudienceTab === k ? "#BB2649" : "transparent", color: adsAudienceTab === k ? "#fff" : "var(--gray-500)", whiteSpace: "nowrap" }}>{l}</button>
                     ))}
-                    </div>
                   </div>
                 </div>
                 {adsAudienceTab === "age" && (
@@ -532,8 +530,7 @@ export function GoogleAdsTab() {
                 )}
               </div>
 
-              <div className="chart-card" style={{ padding: "10px 14px", flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div className="chart-card" style={{ padding: "10px 14px" }}>
                 <div className="chart-header-row">
                   <div>
                     <h3 className="chart-title" style={{ marginBottom: 2 }}>Wilayah & Jadwal</h3>
@@ -543,11 +540,10 @@ export function GoogleAdsTab() {
                       <span>Klik: <strong style={{ color: "#BB2649" }}>{num(geoSummary[0]?.clicks ?? 0)}</strong></span>
                     </div>
                   </div>
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "nowrap" }}>
+                  <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "nowrap" }}>
                     {([{ k: "country", l: "Negara" }, { k: "hour", l: "Jadwal" }, { k: "targeting", l: "Lokasi" }] as const).map(({ k, l }) => (
                       <button key={k} onClick={() => setAdsGeoTab(k)} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: adsGeoTab === k ? 600 : 400, cursor: "pointer", border: adsGeoTab === k ? "1px solid #BB2649" : "1px solid var(--gray-200)", background: adsGeoTab === k ? "#BB2649" : "transparent", color: adsGeoTab === k ? "#fff" : "var(--gray-500)", whiteSpace: "nowrap" }}>{l}</button>
                     ))}
-                    </div>
                   </div>
                 </div>
                 {adsGeoTab === "country" && (
