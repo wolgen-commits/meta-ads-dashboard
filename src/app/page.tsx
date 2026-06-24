@@ -8,6 +8,7 @@ import { DemographicChart }   from "@/components/DemographicChart";
 import { RegionChart }        from "@/components/RegionChart";
 import { PlatformMediaChart } from "@/components/PlatformMediaChart";
 import { InstagramTab }       from "@/components/InstagramTab";
+import { DateRangePicker }    from "@/components/DateRangePicker";
 import { DatabaseTab }        from "@/components/DatabaseTab";
 
 import { CompetitorAdsTab }   from "@/components/CompetitorAdsTab";
@@ -253,14 +254,12 @@ export default function DashboardPage() {
       {activeTab === "ads" && (
         <>
           <div className="filter-bar">
-            <div className="filter-group">
-              <label className="filter-label">Dari</label>
-              <input type="date" className="date-input" value={dateStart} max={dateStop} onChange={(e) => setDateStart(e.target.value)} />
-            </div>
-            <div className="filter-group">
-              <label className="filter-label">Sampai</label>
-              <input type="date" className="date-input" value={dateStop} min={dateStart} max={isoDate(0)} onChange={(e) => setDateStop(e.target.value)} />
-            </div>
+            <DateRangePicker 
+              dateStart={dateStart} 
+              dateStop={dateStop} 
+              onChange={(s, e) => { setDateStart(s); setDateStop(e); }} 
+              maxDate={isoDate(0)} 
+            />
             <MultiSelectFilter
               label="jenis campaign"
               options={objectives ?? []}

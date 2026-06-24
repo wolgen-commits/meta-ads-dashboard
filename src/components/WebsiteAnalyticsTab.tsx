@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { KpiCard } from "@/components/KpiCard";
+import { DateRangePicker } from "@/components/DateRangePicker";
 import {
   useGa4KpiTotals,
   useGa4DailyTrend,
@@ -177,31 +178,15 @@ export function WebsiteAnalyticsTab() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: "24px 0" }}>
+    <div style={{ padding: "4px 0" }}>
 
       {/* ── Date filter ── */}
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <label style={LABEL_STYLE}>Dari</label>
-          <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} style={INPUT_STYLE} />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <label style={LABEL_STYLE}>Sampai</label>
-          <input type="date" value={dateStop} onChange={(e) => setDateStop(e.target.value)} style={INPUT_STYLE} />
-        </div>
-        <div style={{ display: "flex", gap: 6, marginLeft: 4 }}>
-          {PRESETS.map((p) => (
-            <button
-              key={p.label}
-              onClick={() => applyPreset(p.days)}
-              style={{ padding: "5px 10px", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer", border: "1px solid var(--gray-200)", background: "var(--surface)", color: "var(--gray-600)", transition: "all 0.15s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#BB2649"; e.currentTarget.style.color = "#BB2649"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--gray-200)"; e.currentTarget.style.color = "var(--gray-600)"; }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <DateRangePicker 
+          dateStart={dateStart} 
+          dateStop={dateStop} 
+          onChange={(s, e) => { setDateStart(s); setDateStop(e); }} 
+        />
       </div>
 
       {/* ── KPI cards ── */}

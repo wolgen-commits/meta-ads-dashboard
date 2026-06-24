@@ -83,7 +83,6 @@ async function syncCampaigns(sb: any, tok: string, ds: string, de: string) {
       metrics.active_view_viewability
     FROM campaign
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
   `);
 
   const campMap = new Map<string, Record<string, unknown>>();
@@ -180,7 +179,6 @@ async function syncAdGroupPerf(sb: any, tok: string, ds: string, de: string) {
       metrics.ctr, metrics.average_cpc, metrics.cost_per_conversion
     FROM ad_group
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED' AND ad_group.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 
@@ -208,15 +206,11 @@ async function syncKeywords(sb: any, tok: string, ds: string, de: string) {
       ad_group_criterion.keyword.match_type,
       ad_group_criterion.status,
       ad_group_criterion.quality_info.quality_score,
-      ad_group_criterion.quality_info.expected_ctr,
-      ad_group_criterion.quality_info.ad_relevance,
-      ad_group_criterion.quality_info.landing_page_experience,
       ad_group.id, campaign.id, segments.date,
       metrics.impressions, metrics.clicks, metrics.cost_micros,
       metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM keyword_view
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED' AND ad_group.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 
@@ -254,7 +248,6 @@ async function syncSearchTerms(sb: any, tok: string, ds: string, de: string) {
       metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM search_term_view
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 
@@ -289,7 +282,6 @@ async function syncAge(sb: any, tok: string, ds: string, de: string) {
       metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM age_range_view
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 
@@ -323,7 +315,6 @@ async function syncGender(sb: any, tok: string, ds: string, de: string) {
       metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM gender_view
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 
@@ -358,7 +349,6 @@ async function syncGeo(sb: any, tok: string, ds: string, de: string) {
       metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM geographic_view
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 
@@ -391,7 +381,6 @@ async function syncHour(sb: any, tok: string, ds: string, de: string) {
       metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM campaign
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 
@@ -423,7 +412,6 @@ async function syncDevice(sb: any, tok: string, ds: string, de: string) {
       metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM campaign
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 
@@ -493,8 +481,9 @@ async function syncGeoTargets(sb: any, tok: string) {
 
 // deno-lint-ignore no-explicit-any
 async function syncCity(sb: any, tok: string, ds: string, de: string) {
-  // segments.geo_target_city is NOT compatible with 'campaign' resource — use ad_group
-  const rows = await runGaql(tok, `
+  let rows: Row[];
+  try {
+    rows = await runGaql(tok, `
     SELECT
       campaign.id, campaign.status, segments.date,
       segments.geo_target_city, segments.geo_target_region,
@@ -506,6 +495,10 @@ async function syncCity(sb: any, tok: string, ds: string, de: string) {
       AND ad_group.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
+  } catch (e) {
+    console.log("syncCity skipped:", String(e));
+    return { city_rows: 0, note: "geo_target_city not supported in v21" };
+  }
 
   const extractId = (resourceName: unknown) => {
     const s = String(resourceName ?? "");
@@ -547,8 +540,7 @@ async function syncCity(sb: any, tok: string, ds: string, de: string) {
     r.average_cpc = clk  > 0 ? Math.round(cost / clk) : 0;
   }
 
-  // segments.geo_target_city is incompatible with ad_group in v21 — skip if no data
-  if (agg.size === 0) return { city_rows: 0, note: "segments.geo_target_city not supported for ad_group in v21" };
+  if (agg.size === 0) return { city_rows: 0, note: "no city data" };
   const n = await upsertBatch(sb, "google_perf_city", [...agg.values()], "id");
   return { city_rows: n };
 }
@@ -617,7 +609,6 @@ async function syncAuctionInsights(sb: any, tok: string, ds: string, de: string)
         metrics.auction_insight_search_absolute_top_impression_percentage
       FROM auction_insight
       WHERE segments.date BETWEEN '${ds}' AND '${de}'
-        AND campaign.status != 'REMOVED'
     `);
   } catch (e) {
     // Tidak ada auction insight data (bukan Search campaign atau belum ada data)
@@ -659,8 +650,6 @@ async function syncAdPerfDaily(sb: any, tok: string, ds: string, de: string) {
       metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM ad_group_ad
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED' AND ad_group.status != 'REMOVED'
-      AND ad_group_ad.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 
@@ -743,7 +732,6 @@ async function syncConversionActions(sb: any, tok: string, ds: string, de: strin
       metrics.conversions, metrics.conversions_value
     FROM campaign
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
       AND metrics.conversions > 0
   `);
 
@@ -784,7 +772,6 @@ async function syncNetwork(sb: any, tok: string, ds: string, de: string) {
       metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM campaign
     WHERE segments.date BETWEEN '${ds}' AND '${de}'
-      AND campaign.status != 'REMOVED'
       AND metrics.impressions > 0
   `);
 

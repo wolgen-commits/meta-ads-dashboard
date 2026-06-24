@@ -4,6 +4,7 @@ import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Cartesia
 import { useIgAccounts, useIgContentOverview, useIgDailyChart, useIgTopMedia, useIgBottomMedia, useIgAccountInsightsTrend, useIgAudienceDemographics, useIgOnlineFollowers } from "@/hooks/useMetaData";
 import type { IgMedia, IgMediaInsight } from "@/hooks/useMetaData";
 import { useTheme } from "@/hooks/useTheme";
+import { DateRangePicker } from "@/components/DateRangePicker";
 
 const isoDate = (offset = 0) => {
   const d = new Date();
@@ -232,24 +233,11 @@ export function InstagramTab() {
           <span className="ig-select-arrow">▾</span>
         </div>
 
-        <div className="ig-date-picker">
-          <span className="ig-date-icon">📅</span>
-          <input
-            type="date"
-            className="ig-date-input"
-            value={dateStart}
-            max={dateStop}
-            onChange={e => setDateStart(e.target.value)}
-          />
-          <span style={{ color: "var(--gray-400)", fontSize: 13 }}>–</span>
-          <input
-            type="date"
-            className="ig-date-input"
-            value={dateStop}
-            min={dateStart}
-            onChange={e => setDateStop(e.target.value)}
-          />
-        </div>
+        <DateRangePicker 
+          dateStart={dateStart} 
+          dateStop={dateStop} 
+          onChange={(s, e) => { setDateStart(s); setDateStop(e); }} 
+        />
       </div>
 
       {/* ── Summary cards ── */}

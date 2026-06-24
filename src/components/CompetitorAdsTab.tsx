@@ -12,6 +12,7 @@ import {
 } from "@/hooks/useCompetitorAds";
 import { useSWRConfig } from "swr";
 import type { CompetitorAd } from "@/types/database";
+import { DateRangePicker } from "@/components/DateRangePicker";
 
 const COUNTRY_OPTIONS = [
   { value: "ID", label: "Indonesia" },
@@ -785,25 +786,11 @@ export function CompetitorAdsTab() {
         </div>
         <div className="filter-group">
           <label className="filter-label">Iklan Mulai Tayang</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <input
-              type="date"
-              className="date-input"
-              value={filterDateStart}
-              max={filterDateStop || undefined}
-              onChange={(e) => setFilterDateStart(e.target.value)}
-              style={{ width: 130 }}
-            />
-            <span style={{ color: "var(--gray-400)", fontSize: 12 }}>–</span>
-            <input
-              type="date"
-              className="date-input"
-              value={filterDateStop}
-              min={filterDateStart || undefined}
-              onChange={(e) => setFilterDateStop(e.target.value)}
-              style={{ width: 130 }}
-            />
-          </div>
+          <DateRangePicker 
+            dateStart={filterDateStart} 
+            dateStop={filterDateStop} 
+            onChange={(s, e) => { setFilterDateStart(s); setFilterDateStop(e); }} 
+          />
         </div>
         <div className="filter-group" style={{ marginLeft: "auto" }}>
           <label className="filter-label">Tampilan</label>

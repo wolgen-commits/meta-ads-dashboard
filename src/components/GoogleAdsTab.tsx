@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ComposedChart, Bar, Line,
@@ -7,6 +7,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { KpiCard } from "@/components/KpiCard";
+import { DateRangePicker } from "@/components/DateRangePicker";
 import {
   useGoogleCampaigns,
   useGoogleKpiTotals,
@@ -221,14 +222,14 @@ export function GoogleAdsTab() {
     selectedCampaigns.length === 0 ||
     selectedCampaigns.length === (allCampaigns?.length ?? 0);
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ════════════════════════════════════════════════════════════════════════════════
   // RENDER
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ════════════════════════════════════════════════════════════════════════════════
 
   return (
-    <div style={{ padding: "24px 0" }}>
+    <div style={{ padding: "4px 0" }}>
 
-      {/* â”€â”€ Date filter (shared) â”€â”€ */}
+      {/* —————————————————— Date filter (shared) —————————————————— */}
       <div
         style={{
           display: "flex",
@@ -238,54 +239,11 @@ export function GoogleAdsTab() {
           flexWrap: "wrap",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <label style={LABEL_STYLE}>Dari</label>
-          <input
-            type="date"
-            value={dateStart}
-            onChange={(e) => setDateStart(e.target.value)}
-            style={INPUT_STYLE}
-          />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <label style={LABEL_STYLE}>Sampai</label>
-          <input
-            type="date"
-            value={dateStop}
-            onChange={(e) => setDateStop(e.target.value)}
-            style={INPUT_STYLE}
-          />
-        </div>
-        {/* Preset buttons */}
-        <div style={{ display: "flex", gap: 6, marginLeft: 4 }}>
-          {PRESETS.map((p) => (
-            <button
-              key={p.label}
-              onClick={() => applyPreset(p.days)}
-              style={{
-                padding: "5px 10px",
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: "pointer",
-                border: "1px solid var(--gray-200)",
-                background: "var(--surface)",
-                color: "var(--gray-600)",
-                transition: "all 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#BB2649";
-                e.currentTarget.style.color = "#BB2649";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--gray-200)";
-                e.currentTarget.style.color = "var(--gray-600)";
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <DateRangePicker 
+          dateStart={dateStart} 
+          dateStop={dateStop} 
+          onChange={(s, e) => { setDateStart(s); setDateStop(e); }} 
+        />
 
         {/* Campaign filter dropdown — hanya di sub-tab Google Ads */}
         {allCampaigns && allCampaigns.length > 0 && (
@@ -389,7 +347,7 @@ export function GoogleAdsTab() {
                   </div>
                 </div>
                 {chartLoading || dailyChart.length === 0 ? (
-                  <Empty msg={chartLoading ? "Memuat…" : "Belum ada data. Jalankan fetch-google-ads."} />
+                  <Empty msg={chartLoading ? "Memuat…" : "Belum ada data."} />
                 ) : (
                   <ResponsiveContainer width="100%" height={220}>
                     <ComposedChart data={dailyChart} margin={{ top: 2, right: 20, left: -10, bottom: 0 }}>
@@ -469,7 +427,7 @@ export function GoogleAdsTab() {
                 </div>
                 {adsAudienceTab === "age" && (
                   ageLoading ? <Empty msg="Memuat…" /> :
-                  ageSummary.length === 0 ? <Empty msg="Jalankan type=age atau type=demographics." /> : (
+                  ageSummary.length === 0 ? <Empty msg="Belum ada data." /> : (
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={ageSummary} margin={{ top: 2, right: 4, left: -18, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-100)" />
@@ -548,7 +506,7 @@ export function GoogleAdsTab() {
                 </div>
                 {adsGeoTab === "country" && (
                   geoGLoading ? <Empty msg="Memuat…" /> :
-                  geoSummary.length === 0 ? <Empty msg="Jalankan type=geo." /> : (
+                  geoSummary.length === 0 ? <Empty msg="Belum ada data." /> : (
                     <div style={{ overflowY: "auto", maxHeight: 175 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                         <thead><tr>{["Negara","Impresi","Klik","Biaya"].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "4px 6px", fontSize: 10 }}>{h}</th>)}</tr></thead>
@@ -641,7 +599,7 @@ export function GoogleAdsTab() {
                 </div>
                 {adsKwTab1 === "keywords" && (
                   kwLoading ? <Empty msg="Memuat…" /> :
-                  keywordSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=keywords." /> : (
+                  keywordSummary.length === 0 ? <Empty msg="Belum ada data." /> : (
                     <div style={{ overflowY: "auto", maxHeight: 220 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                         <thead><tr>{["Kata Kunci","Type","QS","Impresi","Klik","CTR","Biaya"].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "4px 6px", fontSize: 10 }}>{h}</th>)}</tr></thead>
@@ -712,7 +670,7 @@ export function GoogleAdsTab() {
                 </div>
                 {adsKwTab2 === "adgroups" && (
                   agLoading ? <Empty msg="Memuat…" /> :
-                  adgroupSummary.length === 0 ? <Empty msg="Jalankan fetch-google-ads type=adgroup_perf." /> : (
+                  adgroupSummary.length === 0 ? <Empty msg="Belum ada data." /> : (
                     <div style={{ overflowY: "auto", maxHeight: 220 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                         <thead><tr>{["Ad Group","Campaign","Impresi","Klik","Biaya","Konv."].map((h) => <th key={h} style={{ ...TH_STYLE, padding: "4px 6px", fontSize: 10 }}>{h}</th>)}</tr></thead>
@@ -808,7 +766,7 @@ export function GoogleAdsTab() {
                 </div>
               </div>
               {convLoading ? <Empty msg="Memuat…" /> :
-               !convSummary || convSummary.length === 0 ? <Empty msg="Jalankan type=conversion_actions atau type=extended." /> : (() => {
+               !convSummary || convSummary.length === 0 ? <Empty msg="Belum ada data." /> : (() => {
                 const CONV_COLORS = ["#BB2649","#2563EB","#16A34A","#D97706","#7C3AED","#0891B2"];
                 const pieData = convSummary.slice(0, 6).map((c, i) => ({
                   name: c.name,
@@ -846,11 +804,11 @@ export function GoogleAdsTab() {
               <div className="chart-header-row" style={{ marginBottom: 8 }}>
                 <div>
                   <h3 className="chart-title">Platform & Jaringan</h3>
-                  <p className="chart-subtitle">Search, Display, YouTube</p>
+                  <p className="chart-subtitle" style={{ display: "none" }}></p>
                 </div>
               </div>
               {netLoading ? <Empty msg="Memuat…" /> :
-               !networkSummary || networkSummary.length === 0 ? <Empty msg="Jalankan type=network atau type=extended." /> : (() => {
+               !networkSummary || networkSummary.length === 0 ? <Empty msg="Belum ada data." /> : (() => {
                 const NET_COLOR: Record<string, string> = { SEARCH: "#2563EB", DISPLAY: "#16A34A", YOUTUBE_WATCH: "#BB2649", CROSS_NETWORK: "#D97706", CONTENT: "#7C3AED", MIXED: "#0891B2", UNKNOWN: "var(--gray-300)" };
                 const NET_LABEL: Record<string, string> = { SEARCH: "Search", DISPLAY: "Display", YOUTUBE_WATCH: "YouTube", CROSS_NETWORK: "Cross-Network", CONTENT: "Content", MIXED: "Mixed", UNKNOWN: "Lainnya" };
                 const totalCost = networkSummary.reduce((s, n) => s + n.cost_idr, 0);
@@ -926,7 +884,7 @@ export function GoogleAdsTab() {
                 </div>
               </div>
               {lpLoading ? <Empty msg="Memuat…" /> :
-               !lpSummary || lpSummary.length === 0 ? <Empty msg="Jalankan type=landing_pages atau type=extended." /> : (
+               !lpSummary || lpSummary.length === 0 ? <Empty msg="Belum ada data." /> : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, overflowY: "auto", maxHeight: 210 }}>
                   {lpSummary.slice(0, 8).map((lp) => {
                     const score = lp.speed_score ?? 0;

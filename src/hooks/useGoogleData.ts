@@ -29,6 +29,23 @@ export function useGoogleCampaigns() {
   );
 }
 
+async function fetchAllPages<T>(
+  builder: (from: number, to: number) => ReturnType<typeof supabase.from>,
+  pageSize = 1000
+): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await (builder(from, from + pageSize - 1) as unknown as Promise<{ data: T[] | null; error: unknown }>);
+    if (error) throw error;
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 export function useGoogleAdPerf(
   dateStart: string,
   dateStop: string,
@@ -38,16 +55,18 @@ export function useGoogleAdPerf(
   return useSWR<GoogleAdPerfDaily[]>(
     ["google_adperf", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase
-        .from("v_google_adperf_daily")
-        .select("*")
-        .gte("date", dateStart)
-        .lte("date", dateStop)
-        .order("date", { ascending: true });
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GoogleAdPerfDaily[];
+      const all = await fetchAllPages<GoogleAdPerfDaily>((from, to) => {
+        let q = supabase
+          .from("v_google_adperf_daily")
+          .select("*")
+          .gte("date", dateStart)
+          .lte("date", dateStop)
+          .order("date", { ascending: true })
+          .range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
+      return all;
     },
     { refreshInterval: REVALIDATE }
   );
@@ -146,11 +165,11 @@ export function useGoogleAdGroups(dateStart: string, dateStop: string, campaignI
   return useSWR<GoogleAdGroupPerfDaily[]>(
     ["google_adgroup_perf", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_adgroup_perf").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GoogleAdGroupPerfDaily[];
+      return fetchAllPages<GoogleAdGroupPerfDaily>((from, to) => {
+        let q = supabase.from("v_google_adgroup_perf").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -178,11 +197,11 @@ export function useGoogleKeywords(dateStart: string, dateStop: string, campaignI
   return useSWR<GoogleKeywordPerfDaily[]>(
     ["google_keyword_perf", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_keyword_perf").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GoogleKeywordPerfDaily[];
+      return fetchAllPages<GoogleKeywordPerfDaily>((from, to) => {
+        let q = supabase.from("v_google_keyword_perf").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -212,11 +231,11 @@ export function useGoogleSearchTerms(dateStart: string, dateStop: string, campai
   return useSWR<GoogleSearchTermPerfDaily[]>(
     ["google_search_term_perf", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_search_term_perf").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GoogleSearchTermPerfDaily[];
+      return fetchAllPages<GoogleSearchTermPerfDaily>((from, to) => {
+        let q = supabase.from("v_google_search_term_perf").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -245,11 +264,11 @@ export function useGoogleDevice(dateStart: string, dateStop: string, campaignIds
   return useSWR<GooglePerfDeviceDaily[]>(
     ["google_perf_device", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_perf_device").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GooglePerfDeviceDaily[];
+      return fetchAllPages<GooglePerfDeviceDaily>((from, to) => {
+        let q = supabase.from("v_google_perf_device").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -309,11 +328,11 @@ export function useGoogleAge(dateStart: string, dateStop: string, campaignIds: s
   return useSWR<GooglePerfAgeDaily[]>(
     ["google_perf_age", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_perf_age").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GooglePerfAgeDaily[];
+      return fetchAllPages<GooglePerfAgeDaily>((from, to) => {
+        let q = supabase.from("v_google_perf_age").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -351,11 +370,11 @@ export function useGoogleGender(dateStart: string, dateStop: string, campaignIds
   return useSWR<GooglePerfGenderDaily[]>(
     ["google_perf_gender", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_perf_gender").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GooglePerfGenderDaily[];
+      return fetchAllPages<GooglePerfGenderDaily>((from, to) => {
+        let q = supabase.from("v_google_perf_gender").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -385,11 +404,11 @@ export function useGoogleGeo(dateStart: string, dateStop: string, campaignIds: s
   return useSWR<GooglePerfGeoDaily[]>(
     ["google_perf_geo", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_perf_geo").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GooglePerfGeoDaily[];
+      return fetchAllPages<GooglePerfGeoDaily>((from, to) => {
+        let q = supabase.from("v_google_perf_geo").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -436,11 +455,11 @@ export function useGoogleHour(dateStart: string, dateStop: string, campaignIds: 
   return useSWR<GooglePerfHourDaily[]>(
     ["google_perf_hour", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_perf_hour").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GooglePerfHourDaily[];
+      return fetchAllPages<GooglePerfHourDaily>((from, to) => {
+        let q = supabase.from("v_google_perf_hour").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -501,11 +520,11 @@ export function useGoogleCity(dateStart: string, dateStop: string, campaignIds: 
   return useSWR<GooglePerfCityDaily[]>(
     ["google_perf_city", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_perf_city").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GooglePerfCityDaily[];
+      return fetchAllPages<GooglePerfCityDaily>((from, to) => {
+        let q = supabase.from("v_google_perf_city").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -539,11 +558,11 @@ export function useGoogleAuctionInsights(dateStart: string, dateStop: string, ca
   return useSWR<GoogleAuctionInsight[]>(
     ["google_auction_insights", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_auction_insights").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GoogleAuctionInsight[];
+      return fetchAllPages<GoogleAuctionInsight>((from, to) => {
+        let q = supabase.from("v_google_auction_insights").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -582,11 +601,11 @@ export function useGoogleAdPerfDaily(dateStart: string, dateStop: string, campai
   return useSWR<GoogleAdPerfDailyRow[]>(
     ["google_ad_perf_daily", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_ad_perf_daily").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GoogleAdPerfDailyRow[];
+      return fetchAllPages<GoogleAdPerfDailyRow>((from, to) => {
+        let q = supabase.from("v_google_ad_perf_daily").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -633,11 +652,11 @@ export function useGoogleConversionActions(dateStart: string, dateStop: string, 
   return useSWR<GoogleConversionAction[]>(
     ["google_conversion_actions", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_conversion_actions").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GoogleConversionAction[];
+      return fetchAllPages<GoogleConversionAction>((from, to) => {
+        let q = supabase.from("v_google_conversion_actions").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
@@ -666,11 +685,11 @@ export function useGoogleNetwork(dateStart: string, dateStop: string, campaignId
   return useSWR<GooglePerfNetwork[]>(
     ["google_perf_network", dateStart, dateStop, sorted.join(",")],
     async () => {
-      let q = supabase.from("v_google_perf_network").select("*").gte("date", dateStart).lte("date", dateStop);
-      if (sorted.length > 0) q = q.in("campaign_id", sorted);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as GooglePerfNetwork[];
+      return fetchAllPages<GooglePerfNetwork>((from, to) => {
+        let q = supabase.from("v_google_perf_network").select("*").gte("date", dateStart).lte("date", dateStop).range(from, to);
+        if (sorted.length > 0) q = q.in("campaign_id", sorted);
+        return q;
+      });
     },
     { refreshInterval: REVALIDATE }
   );
