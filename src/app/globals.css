@@ -187,6 +187,30 @@ body {
 .tab-btn:hover { color: var(--gray-800); }
 .tab-btn.active { color: var(--magenta-600); border-bottom-color: var(--magenta-600); font-weight: 600; }
 
+/* ── SUB-TAB BAR (Meta Ads: Magenta / Putrama / Kemasan Jogja) ── */
+.sub-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 12px 24px 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--gray-200);
+}
+.sub-tab-btn {
+  padding: 6px 18px;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  background: none;
+  color: var(--gray-500);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all .15s;
+}
+.sub-tab-btn:hover { color: var(--gray-800); background: var(--gray-50); }
+.sub-tab-btn.active { color: var(--magenta-600); border-bottom-color: var(--magenta-600); font-weight: 600; background: var(--gray-50); }
+
 /* ── FILTER BAR ── */
 .filter-bar {
   display: flex;

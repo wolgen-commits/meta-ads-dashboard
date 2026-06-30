@@ -55,6 +55,11 @@ export function AgeChart({ dateStart, dateStop, campaignIds = [], metricKey = "i
         <h3 className="chart-title" style={{ marginBottom: 2 }}>Distribusi Usia — {metricLabel}</h3>
         <div style={{ fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
           Est. Total: <strong style={{ color: "#BB2649" }}>{num(totalValue)}</strong>
+          {metricKey === "reach" && (
+            <span style={{ marginLeft: 6, fontSize: 10, color: "#A1A1AA" }}>
+              *hanya pengguna dengan data usia tersedia
+            </span>
+          )}
         </div>
       </div>
       <ResponsiveContainer width="100%" height={260}>

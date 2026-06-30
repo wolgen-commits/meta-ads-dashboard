@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { KpiCard }            from "@/components/KpiCard";
 import { SpendCpaChart }      from "@/components/SpendCpaChart";
 import { EngagementChart }    from "@/components/EngagementChart";
@@ -14,7 +15,8 @@ import { DatabaseTab }        from "@/components/DatabaseTab";
 import { CompetitorAdsTab }   from "@/components/CompetitorAdsTab";
 import { GoogleAdsTab }          from "@/components/GoogleAdsTab";
 import { WebsiteAnalyticsTab }   from "@/components/WebsiteAnalyticsTab";
-import { useKpiTotals, useCampaignList, useAdsetList, useAdList } from "@/hooks/useMetaData";
+import { ClientAdsTab }          from "@/components/ClientAdsTab";
+import { useKpiTotals, useCampaignList, useAdsetList, useAdList, useSyncLog } from "@/hooks/useMetaData";
 import { useTheme } from "@/hooks/useTheme";
 
 const isoDate = (offset = 0) => {
@@ -112,6 +114,7 @@ function MultiSelectFilter({
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database" | "competitor-ads" | "google" | "website">("ads");
+  const [adsSubTab, setAdsSubTab] = useState<"magenta" | "putrama" | "jogja">("magenta");
   const [dateStart, setDateStart] = useState(isoDate(-29));
   const [dateStop,  setDateStop]  = useState(isoDate(0));
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>([]);
@@ -204,6 +207,7 @@ export default function DashboardPage() {
   };
 
   const { totals, isLoading } = useKpiTotals(dateStart, dateStop, effectiveCampaignIds, effectiveAdsetIds, effectiveAdIds);
+  const { data: syncLog } = useSyncLog();
   const { theme, toggleTheme, mounted } = useTheme();
 
   return (
@@ -253,6 +257,25 @@ export default function DashboardPage() {
       {/* ── Meta Ads Tab ── */}
       {activeTab === "ads" && (
         <>
+          {/* Sub-tab: Magenta / Putrama / Kemasan Jogja */}
+          <div className="sub-tab-bar">
+            {(["magenta", "putrama", "jogja"] as const).map((tab) => (
+              <button
+                key={tab}
+                className={`sub-tab-btn${adsSubTab === tab ? " active" : ""}`}
+                onClick={() => setAdsSubTab(tab)}
+              >
+                {tab === "magenta" ? "Magenta" : tab === "putrama" ? "Putrama" : "Kemasan Jogja"}
+              </button>
+            ))}
+          </div>
+
+          {/* Putrama & Kemasan Jogja sub-tabs */}
+          {adsSubTab === "putrama" && <ClientAdsTab slug="putrama" businessId="561995191381892" />}
+          {adsSubTab === "jogja"   && <ClientAdsTab slug="jogja"   businessId="4497214590556381" />}
+
+          {/* Magenta sub-tab — konten existing */}
+          {adsSubTab === "magenta" && <>
           <div className="filter-bar">
             <DateRangePicker 
               dateStart={dateStart} 
@@ -288,6 +311,16 @@ export default function DashboardPage() {
               onChange={setSelectedAds}
               formatLabel={(id) => allAds?.find((a) => a.id === id)?.name ?? id}
             />
+            <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+              <span style={{ fontSize: 11, color: "#A1A1AA", fontFamily: "DM Mono, monospace" }}>
+                Business ID: <strong>924702955331274</strong>
+              </span>
+              <span style={{ fontSize: 11, color: "#A1A1AA", fontFamily: "DM Sans" }}>
+                {syncLog?.[0]
+                  ? `Sync: ${new Date(syncLog[0].started_at).toLocaleString("id-ID")} · ${syncLog[0].status}`
+                  : "Belum ada sync"}
+              </span>
+            </div>
           </div>
 
           <section className="kpi-grid">
@@ -326,6 +359,7 @@ export default function DashboardPage() {
             <PlatformMediaChart dateStart={dateStart} dateStop={dateStop} campaignIds={breakdownCampaignIds} metricKey={metricTab} />
             <EngagementChart    dateStart={dateStart} dateStop={dateStop} campaignIds={effectiveCampaignIds} adsetIds={effectiveAdsetIds} adIds={effectiveAdIds} />
           </section>
+          </>}
 
         </>
       )}

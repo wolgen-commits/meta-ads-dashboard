@@ -11,7 +11,8 @@
       "Bash(curl -s --max-time 30 \"http://localhost:3000/api/ig-summary?igAccountId=17841457712254566&dateStart=2026-06-12&dateStop=2026-06-18\")",
       "Bash(curl -s --max-time 35 \"http://localhost:3000/api/ig-summary?igAccountId=17841457712254566&dateStart=2026-05-21&dateStop=2026-06-19\")",
       "Bash(git commit -m ' *)",
-      "Bash(mkdir -p \"d:/meta-ads-dashboard/src/app/api/competitor-ads/status/[jobId]\")"
+      "Bash(mkdir -p \"d:/meta-ads-dashboard/src/app/api/competitor-ads/status/[jobId]\")",
+      "Bash(supabase functions *)"
     ],
     "additionalDirectories": [
       "d:\\meta-ads-dashboard\\src\\app\\api\\competitor-ads\\status"

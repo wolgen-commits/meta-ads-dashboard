@@ -74,9 +74,14 @@ export function PlatformMediaChart({ dateStart, dateStop, campaignIds = [], metr
       <div className="chart-header-row">
         <div>
           <h3 className="chart-title" style={{ marginBottom: 2 }}>Platform & Media</h3>
-          <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
             <span>Est. Total {metricLabel}: <strong style={{ color: "#BB2649" }}>{num(totalValue)}</strong></span>
             {totalSpend > 0 && <><span>·</span><span>Spend: <strong>{(totalSpend / 1_000_000).toFixed(1)}jt</strong></span></>}
+            {metricKey === "reach" && (
+              <span style={{ fontSize: 10, color: "#A1A1AA" }}>
+                *hanya pengguna dengan data platform tersedia
+              </span>
+            )}
           </div>
         </div>
         <div className="eng-tabs">

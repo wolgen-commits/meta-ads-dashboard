@@ -60,13 +60,18 @@ export function DemographicChart({ dateStart, dateStop, campaignIds = [], metric
     <div className="chart-card">
       <div style={{ marginBottom: 8 }}>
         <h3 className="chart-title" style={{ marginBottom: 2 }}>Demografis Usia & Gender — {metricLabel}</h3>
-        <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
           <span>Est. Total: <strong style={{ color: "var(--gray-900)" }}>{num(totalAll)}</strong></span>
           <span>·</span>
           <span style={{ color: "#BB2649" }}>P: <strong>{num(totalPerempuan)}</strong></span>
           <span>·</span>
           <span style={{ color: "#2563EB" }}>L: <strong>{num(totalLaki)}</strong></span>
           {totalLainnya > 0 && <><span>·</span><span style={{ color: "#9B9BA3" }}>Lainnya: <strong>{num(totalLainnya)}</strong></span></>}
+          {metricKey === "reach" && (
+            <span style={{ fontSize: 10, color: "#A1A1AA" }}>
+              *hanya pengguna dengan data usia tersedia
+            </span>
+          )}
         </div>
       </div>
       <ResponsiveContainer width="100%" height={260}>

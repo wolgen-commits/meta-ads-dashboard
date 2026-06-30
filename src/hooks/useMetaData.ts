@@ -195,59 +195,43 @@ export function useKpiTotals(dateStart: string, dateStop: string, campaignIds: s
   const sa = [...adsetIds].sort();
   const si = [...adIds].sort();
 
-  type KpiRow = {
-    impressions: number | null; reach: number | null; clicks: number | null;
-    link_clicks: number | null; spend: number | null;
-    messaging_conversations: number | null; leads: number | null;
-    purchases: number | null; purchase_value: number | null;
-  };
-  type KpiSums = {
+  type RpcResult = {
     impressions: number; reach: number; clicks: number; link_clicks: number;
     spend: number; messaging_conversations: number; leads: number;
     purchases: number; purchase_value: number;
   };
 
-  const { data, error, isLoading } = useSWR<KpiRow[]>(
+  const { data, error, isLoading } = useSWR<RpcResult>(
     ["kpi_totals", dateStart, dateStop, sc.join(","), sa.join(","), si.join(",")],
     async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q: any = supabase
-        .from("ad_performance")
-        .select("impressions,reach,clicks,link_clicks,spend,messaging_conversations,leads,purchases,purchase_value")
-        .gte("date_start", dateStart)
-        .lte("date_start", dateStop);
-      if (si.length > 0) q = q.in("ad_id", si);
-      else if (sa.length > 0) q = q.in("adset_id", sa);
-      if (sc.length > 0) q = q.in("campaign_id", sc);
-      const { data: rows, error: err } = await q as { data: KpiRow[] | null; error: { message: string } | null };
+      const { data: rows, error: err } = await (supabase as any).rpc("get_magenta_kpi_totals", {
+        p_date_start:   dateStart,
+        p_date_stop:    dateStop,
+        p_campaign_ids: sc.length > 0 ? sc : null,
+        p_adset_ids:    sa.length > 0 ? sa : null,
+        p_ad_ids:       si.length > 0 ? si : null,
+      });
       if (err) throw err;
-      return rows ?? [];
+      const r = Array.isArray(rows) ? rows[0] : rows;
+      return r ?? null;
     },
     { refreshInterval: REVALIDATE },
   );
 
-  const sums = data
-    ? data.reduce<KpiSums>(
-        (acc, row) => ({
-          impressions:             acc.impressions             + (row.impressions             ?? 0),
-          reach:                   acc.reach                   + (row.reach                   ?? 0),
-          clicks:                  acc.clicks                  + (row.clicks                  ?? 0),
-          link_clicks:             acc.link_clicks             + (row.link_clicks             ?? 0),
-          spend:                   acc.spend                   + (row.spend                   ?? 0),
-          messaging_conversations: acc.messaging_conversations + (row.messaging_conversations ?? 0),
-          leads:                   acc.leads                   + (row.leads                   ?? 0),
-          purchases:               acc.purchases               + (row.purchases               ?? 0),
-          purchase_value:          acc.purchase_value          + (row.purchase_value          ?? 0),
-        }),
-        { impressions: 0, reach: 0, clicks: 0, link_clicks: 0, spend: 0, messaging_conversations: 0, leads: 0, purchases: 0, purchase_value: 0 },
-      )
-    : null;
-
-  const totals = sums ? {
-    ...sums,
-    ctr_all: sums.impressions > 0 ? (sums.clicks / sums.impressions) * 100 : 0,
-    cpc_all: sums.clicks      > 0 ? sums.spend / sums.clicks : 0,
-    cpm:     sums.impressions > 0 ? (sums.spend / sums.impressions) * 1000 : 0,
+  const totals = data ? {
+    impressions:             Number(data.impressions             ?? 0),
+    reach:                   Number(data.reach                   ?? 0),
+    clicks:                  Number(data.clicks                  ?? 0),
+    link_clicks:             Number(data.link_clicks             ?? 0),
+    spend:                   Number(data.spend                   ?? 0),
+    messaging_conversations: Number(data.messaging_conversations ?? 0),
+    leads:                   Number(data.leads                   ?? 0),
+    purchases:               Number(data.purchases               ?? 0),
+    purchase_value:          Number(data.purchase_value          ?? 0),
+    get ctr_all() { return this.impressions > 0 ? (this.clicks / this.impressions) * 100 : 0; },
+    get cpc_all() { return this.clicks > 0 ? this.spend / this.clicks : 0; },
+    get cpm()     { return this.impressions > 0 ? (this.spend / this.impressions) * 1000 : 0; },
   } : null;
 
   return { totals, error, isLoading };
@@ -258,43 +242,37 @@ export function useSpendChart(dateStart: string, dateStop: string, campaignIds: 
   const sa = [...adsetIds].sort();
   const si = [...adIds].sort();
 
-  type SpendRow = { date_start: string; spend: number | null; messaging_conversations: number | null; };
+  type RpcRow = { date_start: string; spend: number; messaging_conversations: number; };
 
-  const { data, error, isLoading } = useSWR<SpendRow[]>(
+  const { data, error, isLoading } = useSWR<RpcRow[]>(
     ["spend_chart", dateStart, dateStop, sc.join(","), sa.join(","), si.join(",")],
     async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q: any = supabase
-        .from("ad_performance")
-        .select("date_start,spend,messaging_conversations")
-        .gte("date_start", dateStart)
-        .lte("date_start", dateStop)
-        .order("date_start", { ascending: true });
-      if (si.length > 0) q = q.in("ad_id", si);
-      else if (sa.length > 0) q = q.in("adset_id", sa);
-      if (sc.length > 0) q = q.in("campaign_id", sc);
-      const { data: rows, error: err } = await q as { data: SpendRow[] | null; error: { message: string } | null };
+      const { data: rows, error: err } = await (supabase as any).rpc("get_magenta_spend_chart", {
+        p_date_start:   dateStart,
+        p_date_stop:    dateStop,
+        p_campaign_ids: sc.length > 0 ? sc : null,
+        p_adset_ids:    sa.length > 0 ? sa : null,
+        p_ad_ids:       si.length > 0 ? si : null,
+      });
       if (err) throw err;
-      return rows ?? [];
+      return (rows ?? []).map((r: RpcRow) => ({
+        date_start:              r.date_start,
+        spend:                   Number(r.spend                   ?? 0),
+        messaging_conversations: Number(r.messaging_conversations ?? 0),
+      }));
     },
     { refreshInterval: REVALIDATE },
   );
 
   // CPA = spend / messaging_conversations (biaya per percakapan dimulai)
   const chartData = data
-    ? Object.values(
-        data.reduce<Record<string, { date: string; spend: number; conversations: number }>>(
-          (acc, row) => {
-            const d = row.date_start;
-            if (!acc[d]) acc[d] = { date: d, spend: 0, conversations: 0 };
-            acc[d].spend         += row.spend                   ?? 0;
-            acc[d].conversations += row.messaging_conversations ?? 0;
-            return acc;
-          }, {},
-        ),
-      )
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map((d) => ({ ...d, cpa: d.conversations > 0 ? d.spend / d.conversations : 0 }))
+    ? data.map((row) => ({
+        date:          row.date_start,
+        spend:         row.spend,
+        conversations: row.messaging_conversations,
+        cpa:           row.messaging_conversations > 0 ? row.spend / row.messaging_conversations : 0,
+      }))
     : [];
 
   return { chartData, error, isLoading };
@@ -427,22 +405,14 @@ export function useAudienceRaw(
   return useSWR<AudienceInsight[]>(
     ["audience_raw", breakdownType, dateStart, dateStop, sortedIds.join(",")],
     async () => {
-      const baseQuery = () =>
-        supabase
-          .from("audience_insights")
-          .select("*")
-          .eq("breakdown_type", breakdownType)
-          .gte("date_start", dateStart)
-          .lte("date_start", dateStop);
-      let q = baseQuery();
-      if (sortedIds.length > 0) q = q.in("campaign_id", sortedIds);
-      let { data, error } = await q;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("get_magenta_audience_segments", {
+        p_breakdown_type: breakdownType,
+        p_date_start:     dateStart,
+        p_date_stop:      dateStop,
+        p_campaign_ids:   sortedIds.length > 0 ? sortedIds : null,
+      });
       if (error) throw error;
-      if ((!data || data.length === 0) && sortedIds.length > 0) {
-        const fb = await baseQuery();
-        if (fb.error) throw fb.error;
-        data = fb.data;
-      }
       return (data ?? []) as AudienceInsight[];
     },
     { refreshInterval: REVALIDATE },
@@ -461,70 +431,24 @@ export function useAudienceWithMessaging(
   campaignIds: string[] = [],
 ) {
   const sortedIds = [...campaignIds].sort();
-  const sortedKey = sortedIds.join(",");
 
-  const { data: audienceData, isLoading: loadAud } = useAudienceRaw(
-    breakdownType, dateStart, dateStop, campaignIds,
-  );
-
-  // Total messaging_conversations per (campaign_id, date_start) dari ad_performance
-  const { data: mcTotals, isLoading: loadMc } = useSWR<Record<string, number>>(
-    ["mc_totals_by_day", dateStart, dateStop, sortedKey],
+  const { data, error, isLoading } = useSWR<AudienceInsight[]>(
+    ["audience_with_mc", breakdownType, dateStart, dateStop, sortedIds.join(",")],
     async () => {
-      type Row = { campaign_id: string; date_start: string; messaging_conversations: number | null };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q: any = supabase
-        .from("ad_performance")
-        .select("campaign_id,date_start,messaging_conversations")
-        .gte("date_start", dateStart)
-        .lte("date_start", dateStop);
-      if (sortedIds.length > 0) q = q.in("campaign_id", sortedIds);
-      const { data, error } = await q as { data: Row[] | null; error: { message: string } | null };
-      if (error) throw error;
-      const totals: Record<string, number> = {};
-      for (const row of (data ?? [])) {
-        const key = `${row.campaign_id}|${row.date_start}`;
-        totals[key] = (totals[key] ?? 0) + (row.messaging_conversations ?? 0);
-      }
-      return totals;
+      const { data: rows, error: err } = await (supabase as any).rpc("get_magenta_audience_with_messaging", {
+        p_breakdown_type: breakdownType,
+        p_date_start:     dateStart,
+        p_date_stop:      dateStop,
+        p_campaign_ids:   sortedIds.length > 0 ? sortedIds : null,
+      });
+      if (err) throw err;
+      return (rows ?? []) as AudienceInsight[];
     },
     { refreshInterval: REVALIDATE },
   );
 
-  const enriched = useMemo((): AudienceInsight[] | undefined => {
-    if (!audienceData) return undefined;
-    if (!mcTotals)     return audienceData;
-
-    const mcTotal = Object.values(mcTotals).reduce((sum, value) => sum + value, 0);
-    const imprTotal = audienceData.reduce((sum, row) => sum + (row.impressions ?? 0), 0);
-    let assigned = 0;
-
-    // Distribusikan total percakapan periode filter ke semua segmen yang tersedia.
-    // Ini menjaga total chart tetap mengikuti KPI meski breakdown wilayah tidak ada
-    // untuk setiap campaign+tanggal.
-    const allocations = audienceData.map((row) => {
-      const raw = imprTotal > 0
-        ? mcTotal * ((row.impressions ?? 0) / imprTotal)
-        : mcTotal / audienceData.length;
-      const base = Math.floor(raw);
-      assigned += base;
-      return { row, base, remainder: raw - base };
-    });
-
-    let remaining = mcTotal - assigned;
-    return allocations
-      .sort((a, b) => b.remainder - a.remainder)
-      .map((allocation) => {
-        const extra = remaining > 0 ? 1 : 0;
-        remaining -= extra;
-        return {
-          ...allocation.row,
-          messaging_conversations: allocation.base + extra,
-        };
-      });
-  }, [audienceData, mcTotals]);
-
-  return { data: enriched, isLoading: loadAud || loadMc };
+  return { data, isLoading };
 }
 
 export function useAudienceSegments(
@@ -537,67 +461,31 @@ export function useAudienceSegments(
   return useSWR<AudienceTopSegment[]>(
     ["audience_segments", breakdownType, dateStart, dateStop, sortedIds.join(",")],
     async () => {
-      const baseQuery = () =>
-        supabase
-          .from("audience_insights")
-          .select("*")
-          .eq("breakdown_type", breakdownType)
-          .gte("date_start", dateStart)
-          .lte("date_start", dateStop);
-
-      let q = baseQuery();
-      if (sortedIds.length > 0) q = q.in("campaign_id", sortedIds);
-
-      let { data, error } = await q;
-      if (error) throw error;
-
-      // Fallback: jika filter campaign menghasilkan kosong, coba tanpa filter campaign
-      // (audience_insights mungkin tidak di-keyed per campaign di database ini)
-      if ((!data || data.length === 0) && sortedIds.length > 0) {
-        const fallback = await baseQuery();
-        if (fallback.error) throw fallback.error;
-        data = fallback.data;
-      }
-      const rows = (data ?? []) as AudienceInsight[];
-      const grouped = rows.reduce<Record<string, AudienceTopSegment & { ctr_weight: number }>>((acc, row) => {
-        const segmentKey =
-          breakdownType === "age,gender" ? `${row.age ?? "-"}|${row.gender ?? "-"}` :
-          breakdownType === "region" ? row.region ?? "-" :
-          breakdownType === "impression_device" ? row.device_platform ?? "-" :
-          row.placement ?? "-";
-
-        if (!acc[segmentKey]) {
-          acc[segmentKey] = {
-            campaign_id: row.campaign_id,
-            campaign_name: row.campaign_id,
-            breakdown_type: row.breakdown_type,
-            age: row.age,
-            gender: row.gender,
-            region: row.region,
-            device_platform: row.device_platform,
-            placement: row.placement,
-            impressions: 0,
-            clicks: 0,
-            spend: 0,
-            avg_ctr: 0,
-            ctr_weight: 0,
-          };
-        }
-
-        acc[segmentKey].impressions += row.impressions ?? 0;
-        acc[segmentKey].clicks += row.clicks ?? 0;
-        acc[segmentKey].spend += row.spend ?? 0;
-        acc[segmentKey].ctr_weight += (row.ctr ?? 0) * (row.impressions ?? 0);
-        return acc;
-      }, {});
-
-      return Object.values(grouped)
-        .map(({ ctr_weight, ...row }) => ({
-          ...row,
-          avg_ctr: row.impressions > 0 ? ctr_weight / row.impressions : 0,
-        }))
-        .sort((a, b) => b.impressions - a.impressions)
-        .slice(0, 20);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: rpcData, error: rpcErr } = await (supabase as any).rpc("get_magenta_audience_segments", {
+        p_breakdown_type: breakdownType,
+        p_date_start:     dateStart,
+        p_date_stop:      dateStop,
+        p_campaign_ids:   sortedIds.length > 0 ? sortedIds : null,
+      });
+      if (rpcErr) throw rpcErr;
+      // RPC sudah aggregasi server-side dan return top 50 per segmen
+      return ((rpcData ?? []) as (AudienceInsight & { avg_ctr?: number })[]).map((row) => ({
+        campaign_id:       "",
+        campaign_name:     "",
+        breakdown_type:    breakdownType,
+        age:               row.age               ?? null,
+        gender:            row.gender             ?? null,
+        region:            row.region             ?? null,
+        device_platform:   row.device_platform   ?? null,
+        impression_device: (row as unknown as { impression_device?: string }).impression_device ?? null,
+        publisher_platform: (row as unknown as { publisher_platform?: string }).publisher_platform ?? null,
+        placement:         row.placement          ?? null,
+        impressions:       Number(row.impressions ?? 0),
+        clicks:            Number(row.clicks      ?? 0),
+        spend:             Number(row.spend        ?? 0),
+        avg_ctr:           Number(row.avg_ctr      ?? 0),
+      } satisfies AudienceTopSegment));
     },
     { refreshInterval: REVALIDATE },
   );

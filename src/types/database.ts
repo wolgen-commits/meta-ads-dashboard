@@ -56,7 +56,8 @@ export interface CampaignEngagementDaily {
 export interface AudienceTopSegment {
   campaign_id: string; campaign_name: string; breakdown_type: string;
   age: string | null; gender: string | null; region: string | null;
-  device_platform: string | null; placement: string | null;
+  device_platform: string | null; impression_device: string | null;
+  publisher_platform: string | null; placement: string | null;
   impressions: number; clicks: number; spend: number; avg_ctr: number;
 }
 export interface IgAccountInsight {

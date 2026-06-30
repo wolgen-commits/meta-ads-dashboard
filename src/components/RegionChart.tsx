@@ -53,10 +53,15 @@ export function RegionChart({ dateStart, dateStop, campaignIds = [], metricKey =
     <div className="chart-card">
       <div style={{ marginBottom: 8 }}>
         <h3 className="chart-title" style={{ marginBottom: 2 }}>Top 10 Wilayah — {metricLabel}</h3>
-        <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
           <span>Est. Total: <strong style={{ color: "#BB2649" }}>{num(totalAll)}</strong></span>
           <span>·</span>
           <span>{regionCount} wilayah</span>
+          {metricKey === "reach" && (
+            <span style={{ fontSize: 10, color: "#A1A1AA" }}>
+              *hanya pengguna dengan data wilayah tersedia
+            </span>
+          )}
         </div>
       </div>
       <ResponsiveContainer width="100%" height={260}>
