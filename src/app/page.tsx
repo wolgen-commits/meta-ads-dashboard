@@ -10,9 +10,7 @@ import { RegionChart }        from "@/components/RegionChart";
 import { PlatformMediaChart } from "@/components/PlatformMediaChart";
 import { InstagramTab }       from "@/components/InstagramTab";
 import { DateRangePicker }    from "@/components/DateRangePicker";
-import { DatabaseTab }        from "@/components/DatabaseTab";
 
-import { CompetitorAdsTab }   from "@/components/CompetitorAdsTab";
 import { GoogleAdsTab }          from "@/components/GoogleAdsTab";
 import { WebsiteAnalyticsTab }   from "@/components/WebsiteAnalyticsTab";
 import { ClientAdsTab }          from "@/components/ClientAdsTab";
@@ -113,7 +111,7 @@ function MultiSelectFilter({
 }
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "database" | "competitor-ads" | "google" | "website">("ads");
+  const [activeTab, setActiveTab] = useState<"ads" | "instagram" | "google" | "website">("ads");
   const [adsSubTab, setAdsSubTab] = useState<"magenta" | "putrama" | "jogja">("magenta");
   const [dateStart, setDateStart] = useState(isoDate(-29));
   const [dateStop,  setDateStop]  = useState(isoDate(0));
@@ -239,13 +237,6 @@ export default function DashboardPage() {
         <button className={`tab-btn ${activeTab === "instagram" ? "active" : ""}`} onClick={() => setActiveTab("instagram")}>
           Instagram
         </button>
-        <button className={`tab-btn ${activeTab === "database" ? "active" : ""}`} onClick={() => setActiveTab("database")}>
-          Database
-        </button>
-
-        <button className={`tab-btn ${activeTab === "competitor-ads" ? "active" : ""}`} onClick={() => setActiveTab("competitor-ads")}>
-          Competitor Ads
-        </button>
         <button className={`tab-btn ${activeTab === "google" ? "active" : ""}`} onClick={() => setActiveTab("google")}>
           Google Ads
         </button>
@@ -365,9 +356,6 @@ export default function DashboardPage() {
       )}
 
       {activeTab === "instagram"      && <InstagramTab />}
-      {activeTab === "database"       && <DatabaseTab />}
-
-      {activeTab === "competitor-ads" && <CompetitorAdsTab />}
       {activeTab === "google"         && <GoogleAdsTab />}
       {activeTab === "website"        && <WebsiteAnalyticsTab />}
     </div>

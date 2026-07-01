@@ -26,10 +26,23 @@ const isoDate = (offset = 0) => {
 };
 const idr = (n: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+const shortIdr = (v: number) =>
+  v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}rb` : String(Math.round(v));
 const num = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}jt` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}rb` : String(n);
 const fmt = (d: unknown) =>
   new Date(String(d)).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+
+const KPI_DESCRIPTIONS: Record<string, string> = {
+  "Total Biaya":   "Total anggaran iklan yang sudah digunakan dalam periode yang dipilih.",
+  "Percakapan":    "Jumlah percakapan pesan yang dimulai oleh pengguna melalui iklan (Messaging Conversations Started).",
+  "Impresi":       "Jumlah total berapa kali iklan ditampilkan ke pengguna. Satu orang bisa melihat iklan yang sama lebih dari sekali.",
+  "Jangkauan":     "Jumlah orang unik yang melihat iklan minimal satu kali dalam periode yang dipilih.",
+  "Klik Tautan":   "Jumlah klik pada tautan (link) di dalam iklan yang mengarah ke tujuan yang ditentukan.",
+  "CPC (Semua)":   "Cost Per Click (Semua) — rata-rata biaya per klik dari semua jenis klik, bukan hanya klik tautan.",
+  "CTR (Semua)":   "Click-Through Rate (Semua) — persentase tayangan yang menghasilkan klik dari semua jenis klik.",
+  "CPM":           "Cost Per Mille — biaya per 1.000 tayangan iklan.",
+};
 
 const OBJECTIVE_LABELS: Record<string, string> = {
   OUTCOME_AWARENESS:     "Kesadaran",
@@ -165,8 +178,12 @@ export function ClientAdsTab({ slug, businessId }: { slug: string; businessId: s
   const lastSync = syncLog ? (syncLog as SyncLogRow[])[0] : undefined;
 
   // Spend / Engagement
-  const totalSpend   = spendData.reduce((s, d) => s + d.spend, 0);
-  const totalResults = spendData.reduce((s, d) => s + d.results, 0);
+  const totalSpend         = spendData.reduce((s, d) => s + d.spend, 0);
+  const totalConversations = spendData.reduce((s, d) => s + d.conversations, 0);
+  const spendDataWithCpa = useMemo(
+    () => spendData.map((d) => ({ ...d, cpa: d.conversations > 0 ? d.spend / d.conversations : 0 })),
+    [spendData],
+  );
   const activeEngMetric = ENG_METRICS.find((m) => m.key === engMetric)!;
   const engChartData    = engData.map((d) => ({ ...d, all: d.reactions + d.comments + d.shares + d.saves + d.conversations }));
   const totalEngActive  = engChartData.reduce((s, d) => s + (d[engMetric as keyof typeof d] as number ?? 0), 0);
@@ -291,14 +308,14 @@ export function ClientAdsTab({ slug, businessId }: { slug: string; businessId: s
 
       {/* KPI Cards */}
       <section className="kpi-grid">
-        <KpiCard label="Total Biaya"  value={totals ? idr(totals.spend)                   : "—"} accent="magenta" loading={kpiLoading} />
-        <KpiCard label="Leads"        value={totals ? num(totals.leads)                    : "—"} accent="success" loading={kpiLoading} />
-        <KpiCard label="Impresi"      value={totals ? num(totals.impressions)              : "—"} loading={kpiLoading} />
-        <KpiCard label="Jangkauan"    value={totals ? num(totals.reach)                    : "—"} accent="info"    loading={kpiLoading} />
-        <KpiCard label="Klik Tautan"  value={totals ? num(totals.link_clicks)              : "—"} loading={kpiLoading} />
-        <KpiCard label="Percakapan"   value={totals ? num(totals.messaging_conversations)  : "—"} loading={kpiLoading} />
-        <KpiCard label="CPM"          value={totals ? idr(totals.cpm)                      : "—"} sub="per 1.000 tayang" loading={kpiLoading} />
-        <KpiCard label="CPC"          value={totals ? idr(totals.cpc)                      : "—"} sub="per klik" loading={kpiLoading} />
+        <KpiCard label="Total Biaya"  value={totals ? idr(totals.spend)                  : "—"} accent="magenta" loading={kpiLoading} description={KPI_DESCRIPTIONS["Total Biaya"]} />
+        <KpiCard label="Percakapan"   value={totals ? num(totals.messaging_conversations) : "—"} sub="pesan dimulai" loading={kpiLoading} description={KPI_DESCRIPTIONS["Percakapan"]} />
+        <KpiCard label="Impresi"      value={totals ? num(totals.impressions)             : "—"} loading={kpiLoading} description={KPI_DESCRIPTIONS["Impresi"]} />
+        <KpiCard label="Jangkauan"    value={totals ? num(totals.reach)                   : "—"} accent="info" loading={kpiLoading} description={KPI_DESCRIPTIONS["Jangkauan"]} />
+        <KpiCard label="Klik Tautan"  value={totals ? num(totals.link_clicks)             : "—"} loading={kpiLoading} description={KPI_DESCRIPTIONS["Klik Tautan"]} />
+        <KpiCard label="CPC (Semua)"  value={totals ? idr(totals.cpc)                    : "—"} sub="per klik" loading={kpiLoading} description={KPI_DESCRIPTIONS["CPC (Semua)"]} />
+        <KpiCard label="CTR (Semua)"  value={totals ? `${totals.ctr.toFixed(2)}%`        : "—"} loading={kpiLoading} description={KPI_DESCRIPTIONS["CTR (Semua)"]} />
+        <KpiCard label="CPM"          value={totals ? idr(totals.cpm)                    : "—"} sub="per 1.000 tayang" loading={kpiLoading} description={KPI_DESCRIPTIONS["CPM"]} />
       </section>
 
       {/* Metric tab bar — sama seperti Magenta */}
@@ -319,30 +336,32 @@ export function ClientAdsTab({ slug, businessId }: { slug: string; businessId: s
       {/* Charts — urutan: Spend | Usia | Demografis | Wilayah | Platform | Engagement */}
       <section className="charts-grid">
 
-        {/* 1. Spend Harian & Hasil */}
+        {/* 1. Spend Harian & CPA */}
         <div className="chart-card">
           <div className="chart-header-row">
             <div>
-              <h3 className="chart-title" style={{ marginBottom: 2 }}>Spend Harian & Hasil</h3>
+              <h3 className="chart-title" style={{ marginBottom: 2 }}>Spend Harian & CPA</h3>
               <div style={{ display: "flex", gap: 12, fontSize: 11, fontFamily: "DM Sans", color: tickColor }}>
                 <span>Total Spend: <strong style={{ color: "#BB2649" }}>{idr(totalSpend)}</strong></span>
                 <span>·</span>
-                <span>Hasil: <strong style={{ color: "#16A34A" }}>{num(totalResults)}</strong></span>
+                <span>Percakapan: <strong style={{ color: "#2563EB" }}>{totalConversations.toLocaleString("id-ID")}</strong></span>
               </div>
             </div>
+            <span style={{ fontSize: 10, color: tickColor, fontFamily: "DM Sans" }}>CPA = Spend ÷ Percakapan</span>
           </div>
           {spendLoading ? <div className="chart-skeleton" style={{ height: CHART_H }} /> : (
             <ResponsiveContainer width="100%" height={CHART_H}>
-              <ComposedChart data={spendData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+              <ComposedChart data={spendDataWithCpa} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis dataKey="date" tickFormatter={fmt} tick={{ fontSize: 11, fill: tickColor, fontFamily: "DM Sans" }} />
                 <YAxis yAxisId="spend" tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}jt`} tick={{ fontSize: 11, fill: tickColor, fontFamily: "DM Sans" }} />
-                <YAxis yAxisId="results" orientation="right" tick={{ fontSize: 11, fill: tickColor, fontFamily: "DM Sans" }} />
-                <Tooltip formatter={(v, name) => name === "Spend" ? [idr(Number(v)), "Spend"] : [num(Number(v)), "Hasil"]}
+                <YAxis yAxisId="cpa" orientation="right" tickFormatter={shortIdr} tick={{ fontSize: 11, fill: tickColor, fontFamily: "DM Sans" }} />
+                <Tooltip
+                  formatter={(v, name) => name === "Spend" ? [idr(Number(v)), "Spend"] : [idr(Number(v)), "CPA (Biaya/Percakapan)"]}
                   labelFormatter={fmt} contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 12, fontFamily: "DM Sans" }} />
-                <Bar  yAxisId="spend"   dataKey="spend"   name="Spend" fill="#BB2649" radius={[4, 4, 0, 0]} opacity={0.85} />
-                <Line yAxisId="results" dataKey="results" name="Hasil" stroke="#16A34A" strokeWidth={2} dot={false} />
+                <Bar  yAxisId="spend" dataKey="spend" name="Spend"                    fill="#BB2649" radius={[4, 4, 0, 0]} opacity={0.85} />
+                <Line yAxisId="cpa"   dataKey="cpa"   name="CPA (Rp/Percakapan)"      stroke="#2563EB" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           )}

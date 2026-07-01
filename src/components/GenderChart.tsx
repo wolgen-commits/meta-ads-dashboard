@@ -58,6 +58,9 @@ export function GenderChart({ dateStart, dateStop, campaignIds = [] }: Props) {
   return (
     <div className="chart-card">
       <h3 className="chart-title">Distribusi Gender</h3>
+      <div style={{ fontSize: 10, color: "#A1A1AA", marginBottom: 6, fontFamily: "DM Sans" }}>
+        * Berdasarkan data breakdown yang telah di-backfill (proporsi tetap akurat)
+      </div>
       <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie

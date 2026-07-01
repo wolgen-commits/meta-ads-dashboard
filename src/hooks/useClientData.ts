@@ -116,7 +116,7 @@ export function useClientSpendChart(
 ) {
   const sc = [...campaignIds].sort();
 
-  type RpcRow = { date: string; spend: number; results: number };
+  type RpcRow = { date: string; spend: number; results: number; conversations: number };
 
   const { data, error, isLoading } = useSWR<RpcRow[]>(
     ["client_spend_chart", portfolioSlug, dateStart, dateStop, sc.join(",")],
@@ -129,9 +129,10 @@ export function useClientSpendChart(
       });
       if (err) throw err;
       return (rows ?? []).map((r: RpcRow) => ({
-        date:    r.date,
-        spend:   Number(r.spend   ?? 0),
-        results: Number(r.results ?? 0),
+        date:          r.date,
+        spend:         Number(r.spend         ?? 0),
+        results:       Number(r.results       ?? 0),
+        conversations: Number(r.conversations ?? 0),
       }));
     },
     { refreshInterval: REVALIDATE },
